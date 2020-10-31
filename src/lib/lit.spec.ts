@@ -54,3 +54,18 @@ test('capture', () => {
   expect(regex`Hello ${capture('World')}`).toEqual(/Hello (World)/);
   expect(regex`Hello ${capture(/[Ww]orld/)}`).toEqual(/Hello ([Ww]orld)/);
 });
+
+test('ignore case', () => {
+  expect(regex`Hello ${ignoreCase('World')}`).toEqual(/Hello [Ww][Oo][Rr][Ll][Dd]/);
+  expect(regex`Hello ${ignoreCase(/world/)}`).toEqual(/Hello [Ww][Oo][Rr][Ll][Dd]/);
+  expect(regex`Hello ${/world/i}`).toEqual(/Hello [Ww][Oo][Rr][Ll][Dd]/);
+
+  expect(regex`${/World/i}`).toEqual(/World/i);
+  expect(regex`${ignoreCase('World')}`).toEqual(/World/i);
+});
+
+test('returns a clone', () => {
+  const re = /World/;
+  expect(regex`${re}`).toEqual(re);
+  expect(regex`${re}`).not.toBe(re);
+});

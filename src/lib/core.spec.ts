@@ -18,6 +18,7 @@ import {
 test('seq', () => {
   expect(seq()).toEqual(/(?:)/);
   expect(seq('')).toEqual(/(?:)/); // ??
+  expect(seq('', '', '')).toEqual(/(?:)/); // ??
 
   expect(seq('a')).toEqual(/a/);
   expect(seq('a', 'b')).toEqual(/ab/);
@@ -32,15 +33,27 @@ test('seq', () => {
   expect(seq(/^/, 'b', /$/)).toEqual(/^b$/);
   expect(anyOf(seq(seq(/a|b/)))).toEqual(/(?:a|b)/);
   expect(seq('thingy', anyOf(/[a]/, /b/))).toEqual(/thingy(?:[a]|b)/);
+
+  expect(seq(/a/i)).toEqual(/a/i);
+  expect(seq(/a/i, 'b')).toEqual(/[Aa]b/);
+  expect(seq(/a/i, /b/i)).toEqual(/ab/i);
 });
 
 test('ignoreCase', () => {
-  expect(ignoreCase('WoRld')).toEqual(/[Ww][Oo][Rr][Ll][Dd]/);
-  expect(ignoreCase('Hello world')).toEqual(
-    /[Hh][Ee][Ll][Ll][Oo] [Ww][Oo][Rr][Ll][Dd]/
-  );
+  expect(ignoreCase('WoRld')).toEqual(/WoRld/i);
+  expect(ignoreCase('Hello world')).toEqual(/Hello world/i);
 
   expect(ignoreCase('WoRld').test('world')).toBe(true);
+
+  expect(seq(ignoreCase('a'), 'b')).toEqual(/[Aa]b/);
+  expect(seq(ignoreCase(/a/), 'b')).toEqual(/[Aa]b/);
+  expect(seq(ignoreCase(/a/i), 'b')).toEqual(/[Aa]b/);
+
+  expect(seq(/a/i, 'b')).toEqual(/[Aa]b/);
+
+  expect(ignoreCase(seq(/a/i, 'b'))).toEqual(/[Aa]b/i);  // TODO: /ab/i ?
+
+  expect(ignoreCase(ignoreCase('WoRld'))).toEqual(/WoRld/i);
 });
 
 test('anyOf', () => {
@@ -79,7 +92,7 @@ test('avoid', () => {
   expect(avoid('ab')).toEqual(/(?!ab)/);
   expect(avoid('abc')).toEqual(/(?!abc)/);
 
-  expect(avoid(/a/)).toEqual(/(?!a)/); // TODO: /[^a]/
+  expect(avoid(/a/)).toEqual(/[^a]/);
   expect(avoid(/ab/)).toEqual(/(?!ab)/);
   expect(avoid(/abc/)).toEqual(/(?!abc)/);
 
@@ -176,3 +189,4 @@ test('named', () => {
     /(?<greeting>(?:hello|world))/
   );
 });
+

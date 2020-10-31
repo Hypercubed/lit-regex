@@ -1,7 +1,5 @@
 // from https://github.com/pygy/compose-regexp.js/blob/master/compose-regexp.js
 
-export type AcceptedInput = string | RegExp | Array<AcceptedInput>;
-
 const tokenMatcher = /(\\[^])|\[\-|[-()|\[\]]/g; // eslint-disable-line no-useless-escape
 
 /**
@@ -49,18 +47,12 @@ export function isOneGroup(source: string) {
 }
 
 /**
- * Determines if an input is atomic
+ * Determines if an source is atomic
  */
-export function isAtomic(input: AcceptedInput) {
-  if (input instanceof RegExp) {
-    const { source } = input;
-    return (
-      source.length === 1 ||
-      /^\\[^]$|^\[(?:\\[^]|[^\]])*\]$/.test(source) ||
-      isOneGroup(source)
-    );
-  } else if (typeof input === 'string') {
-    return input.length === 1;
-  }
-  return true;
+export function isAtomic(source: string) {
+  return (
+    source.length === 1 ||
+    /^\\[^]$|^\[(?:\\[^]|[^\]])*\]$/.test(source) ||
+    isOneGroup(source)
+  );
 }

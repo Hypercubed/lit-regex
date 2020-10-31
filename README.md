@@ -51,7 +51,7 @@ const re = regex`We sell ${products} for ${price} [each].`;
 A few simple rules to notice:
 
 * If an expression is a string, it is escaped for literal matching; this includes the static potions of the template string.
-* If an expression is a `RegExp`, the regular expression source is used (flags are ignored).
+* If an expression is a `RegExp`, the regular expression i embeded as a substring match (flags are ignored).
 * If an expression is an Array, it is treated as an alternation (OR operand) and each item within the array are treated with these same rules.
 
 ## Functional API

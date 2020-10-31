@@ -4,39 +4,47 @@ import { hasTopLevelChoice, isAtomic } from './utils';
 
 export type AcceptedInput = string | RegExp | Array<AcceptedInput>;
 
-function normalize(input: AcceptedInput) {
-  if (input instanceof RegExp) return input.source;
-  if (Array.isArray(input)) return _anyOf(input);
+function normalize(input: AcceptedInput): string {
+  if (input instanceof RegExp) return input.ignoreCase ? _ignoreCase(input.source) : input.source;
+  if (Array.isArray(input)) return _anyOf(input.map(normalize));
   return escape(String(input));
+}
+
+function clone(re: RegExp, flags?: string) {
+  return new RegExp(re.source, typeof flags !== 'undefined' ? flags : re.flags);
 }
 
 // *** Sequences **
 export const empty = new RegExp('');
 
-function _seq(args: readonly AcceptedInput[]): string {
+function _seq(args: string[]): string {
+  const needsGroups = args.length > 1;
   return args
     .map((arg) => {
-      return args.length > 1 &&
-        arg instanceof RegExp &&
-        hasTopLevelChoice(arg.source)
-        ? _group(arg)
-        : normalize(arg);
+      return needsGroups && hasTopLevelChoice(arg)
+        ? `(?:${arg})`
+        : arg;
     })
     .join('');
 }
 
 export function seq(...args: readonly AcceptedInput[]): RegExp {
   if (!args.length) return empty;
-  return new RegExp(_seq(args));
+  if (args.length === 1 && args[0] instanceof RegExp) return clone(args[0]);  // if only one regexp, return a clone
+  const allIgnoreCase = args.every(arg => arg instanceof RegExp && arg.ignoreCase);
+  if (allIgnoreCase) {
+    return new RegExp(_seq(args.map(a => normalize(clone(a as RegExp, '')))), 'i'); // if all are regexp and case ignored; move ignore flag to top
+  }
+  return new RegExp(_seq(args.map(normalize)));
 }
 
 // *** Groups **
-export function _group(input: AcceptedInput): string {
-  return `(?:${normalize(input)})`;
+export function _group(source: string): string {
+  return `(?:${source})`;
 }
 
 export function group(input: AcceptedInput) {
-  return new RegExp(_group(input));
+  return new RegExp(_group(normalize(input)));
 }
 
 export function lookAhead(input: AcceptedInput) {
@@ -44,21 +52,21 @@ export function lookAhead(input: AcceptedInput) {
 }
 
 function _notChar(source: string): string {
-  return `[^${normalize(source)}]`;
+  return `[^${source}]`;
 }
 
 export function notChar(source: string): RegExp {
-  return new RegExp(_notChar(source));
+  return new RegExp(_notChar(normalize(source)));
 }
 
-function _avoid(input: AcceptedInput): string {
-  return typeof input === 'string' && input.length === 1
-    ? _notChar(input)
-    : `(?!${normalize(input)})`;
+function _avoid(source: string): string {
+  return /^\w$/.test(source)
+    ? _notChar(source)
+    : `(?!${source})`;
 }
 
 export function avoid(input: AcceptedInput): RegExp {
-  return new RegExp(_avoid(input));
+  return new RegExp(_avoid(normalize(input)));
 }
 
 export function capture(input: AcceptedInput): RegExp {
@@ -66,38 +74,40 @@ export function capture(input: AcceptedInput): RegExp {
 }
 
 export function optional(input: AcceptedInput): RegExp {
-  return new RegExp((isAtomic(input) ? normalize(input) : _group(input)) + '?');
+  const normalized = normalize(input);
+  return new RegExp(isAtomic(normalized) ? `${normalized}?` : `(?:${normalized})?`);
 }
 
 // *** repeats ***
 
 export function oneOrMore(input: AcceptedInput) {
-  return new RegExp((isAtomic(input) ? normalize(input) : _group(input)) + '+');
+  const normalized = normalize(input);
+  return new RegExp(isAtomic(normalized) ? `${normalized}+` : `(?:${normalized})+`);
 }
+
 export function zeroOrMore(input: AcceptedInput) {
-  return new RegExp((isAtomic(input) ? normalize(input) : _group(input)) + '*');
+  const normalized = normalize(input);
+  return new RegExp(isAtomic(normalized) ? `${normalized}*` : `(?:${normalized})*`);
 }
 
 function _anyChar(args: readonly string[]) {
-  return `[${_seq(args)}]`;
+  return `[${_seq(args.map(normalize))}]`;
 }
 
 export function anyChar(...args: readonly string[]) {
   return new RegExp(_anyChar(args));
 }
 
-export function _anyOf(args: readonly AcceptedInput[]): string {
-  const allChars = args.every((s) => {
-    return typeof s === 'string' && s.length === 1;
-  });
+export function _anyOf(args: string[]): string {
+  const allChars = args.every(s => /^\w$/.test(s));
   return allChars
-    ? _anyChar(args as readonly string[])
-    : `(?:${args.map(normalize).join('|')})`;
+    ? _anyChar(args)
+    : `(?:${args.join('|')})`;
 }
 
 export function anyOf(...args: readonly AcceptedInput[]) {
   if (!args.length) return empty;
-  return new RegExp(_anyOf(args));
+  return new RegExp(_anyOf(args.map(normalize)));
 }
 
 // *** Wrappers ***
@@ -106,19 +116,21 @@ export function all(input: AcceptedInput) {
   return new RegExp(`^${normalize(input)}$`);
 }
 
-export function ignoreCase(input: AcceptedInput) {
-  input = normalize(input)
-    .split('')
-    .map((l) => {
-      const lc = l.toLowerCase();
-      const up = l.toUpperCase();
-      if (lc !== up) {
-        return `[${up}${lc}]`;
+export function _ignoreCase(source: string) {
+  return source.replace(/\\\\[\s\S]|[A-Za-z]/g, s => {
+    if (s.length === 1) {
+      const cu = s.charCodeAt(0) & ~32;
+      if (65 <= cu && cu <= 90) {
+        return '[' + String.fromCharCode(cu, cu | 32) + ']';
       }
-      return l;
-    })
-    .join('');
-  return new RegExp(input);
+    }
+    return s;
+  });
+}
+
+export function ignoreCase(input: AcceptedInput) {
+  if (input instanceof RegExp && input.ignoreCase) return clone(input);
+  return new RegExp(normalize(input), 'i');
 }
 
 export function flags(input: AcceptedInput, opts: string) {
@@ -126,9 +138,8 @@ export function flags(input: AcceptedInput, opts: string) {
 }
 
 export function repeat(input: AcceptedInput, N: number | [number, number]) {
-  return new RegExp(
-    (isAtomic(input) ? normalize(input) : _group(input)) + `{${N}}`
-  );
+  const normalized = normalize(input);
+  return new RegExp(isAtomic(normalized) ? `${normalized}{${N}}` : `(?:${normalized}){${N}}`);
 }
 
 export function named(input: AcceptedInput, name: string): RegExp {
