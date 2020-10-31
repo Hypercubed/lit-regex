@@ -16,7 +16,7 @@ npm i --save-dev lit-regex
 
 ## Usage
 
-Expanding on the example above.  Suppose we want to match the string "XXX for $YY.YY (per lb)" were `XXX` can be "Apples" or "Oranges" (first letter case insensitive) and `YY.YY` and be any price.  Maybe you're sufficiently familiar with regular expressions to write:
+Expanding on the example above.  Suppose we want to match the string "XXX for $YY.YY (per lb)" were `XXX` can be "Apples" or "Oranges" (first letter case-insensitive) and `YY.YY` is any price.  Maybe you're sufficiently familiar with regular expressions to write:
 
 ```ts
 const re = /We sell (?:[Aa]pples|[Oo]ranges) for \$\d+\.\d+ \(per lb\)/;
@@ -34,13 +34,13 @@ const re = new RegExp(`We sell ${products.source} for ${price} \\[each\\]\\.`);
 Notice a few difficulties here:
 
 * Since `int` and `products` are RegExp objects we need to use `.source` to get the source regexp.
-* You need to remember what characters need to be escaped.
-* Look at all the horrible double escaping!
+* Exact t test matches need to be escaped.
+* Regular expressions within the string need to be double escaped.
 
 Using `lit-regex` we could write:
 
-```ts
-import { regex } from "./lit";
+```js
+import { regex } from 'lit-regex';
 
 const int = /\d+/;
 const price = regex`$${int}.${int}`;
@@ -50,15 +50,41 @@ const re = regex`We sell ${products} for ${price} [each].`;
 
 A few simple rules to notice:
 
-* The static potions of the template is treated like plain text and properly escaped for the final regular expression.
-* When using embed expressions we follow three rules:
-  1. If the expression is a string, it is escaped.
-  2. If the value is a RegExp, the regular expression source is extracted.
-  3. If the value is an Array, it is treated as a to a alternation (OR operand) and each item within the array are treated with the same rules.
+* If an expression is a string, it is escaped for literal matching; this includes the static potions of the template string.
+* If an expression is a `RegExp`, the regular expression source is used (flags are ignored).
+* If an expression is an Array, it is treated as an alternation (OR operand) and each item within the array are treated with these same rules.
 
-## API Details
+## Functional API
 
-Most of the power of `lit-regex` is in the `regex` template tag; which is effectively sugar for a set of composable functional tools for building regular expressions.  These functional tools can also be used to enhance the template tag.  Each function is explained below:
+Most of the power of `lit-regex` is in the `regex` template tag; which is effectively sugar for a set of composable functional tools for building regular expressions.  These functions can be used to alone to compose regular expressions or within `regex` template tags.  These functions, in general, follow the same the rules listed above again:
+
+* String are treated as literals.
+* RegExps are treated as a regular expression.
+* Arrays are treated as a to a alternation.
+
+The example above could be rewritten using the composition functions:
+
+```js
+import { seq } from 'lit-regex';
+
+const int = /\d+/;
+const price = seq('$', int, '.', int);
+const products = anyOf(/[Aa]pples/, /[Oo]ranges/);
+const re = seq('We sell ', products, ' for ', price, ' [each].');
+```
+
+or a combination of functions and string literals:
+
+```js
+import { seq } from 'lit-regex';
+
+const int = /\d+/;
+const price = seq('$', int, '.', int);
+const products = anyOf(/[Aa]pples/, /[Oo]ranges/);
+const re = regex`We sell ${products} for ${price} [each].`;
+```
+
+Each function is explained below:
 
 ### `seq(...arg)`
 
@@ -84,10 +110,10 @@ The single argument is treated according to the expression rules listed above an
 
 ```js
 group('Hello');
-// same as /(Hello)/
+// same as /(?:Hello)/
 
 group(/[Ww]orld/);
-// same as /([Ww]orld)/
+// same as /(?:[Ww]orld)/
 ```
 
 ### `lookAhead(arg)`
@@ -148,6 +174,73 @@ avoid(/[Ww]orld/);
 
 avoid(['Hello', /[Ww]orld/]);
 // same as /(?:(?:Hello|[Ww]orld))?/
+```
+
+### `oneOrMore(arg)`
+
+```js
+oneOrMore('Hello');
+// same as /(?:Hello)+/
+
+oneOrMore(/[Ww]orld/);
+// same as /(?:[Ww]orld)+/
+
+oneOrMore(['Hello', /[Ww]orld/]);
+// same as /(?:(?:Hello|[Ww]orld))+/
+```
+
+### `oneOrMore(arg)`
+
+```js
+zeroOrMore('Hello');
+// same as /(?:Hello)*/
+
+zeroOrMore(/[Ww]orld/);
+// same as /(?:[Ww]orld)*/
+
+zeroOrMore(['Hello', /[Ww]orld/]);
+// same as /(?:(?:Hello|[Ww]orld))*/
+```
+
+## More examples
+
+### email
+
+```js
+import { regex, oneOrMore, repeat } from 'lit-regex';
+
+const localPart = oneOrMore(/[a-zA-Z0-9._%-]/);
+const domainPart = oneOrMore(/[a-zA-Z0-9.-]/);
+const tld = repeat(/[a-zA-Z]/, [2, 24]);
+
+const re = regex`${localPart}@${domainPart).${tld}`;
+
+// same as /[a-zA-Z\d\.-_]+@[a-zA-Z\d\.-]+\.[a-zA-Z]{2,24}/
+```
+
+### URL
+
+```js
+import { regex, oneOrMore, repeat } from 'lit-regex';
+
+const scheme = ['http', 'https', 'ftp'];
+const sub = 'www.';
+const sld = repeat(/[-a-zA-Z0-9@:%._\+~#=]/, [2, 256]);
+const domainPart = oneOrMore(/[a-zA-Z0-9.-]/);
+const tld = repeat(/[a-zA-Z]/, [2, 24]);
+
+const re = regex`${scheme}://${optional(sub)}${domainPart).${tld}`;
+```
+
+### Dates with named capture
+
+```js
+import { regex, oneOrMore, repeat } from 'lit-regex';
+
+const year = repeat(/\d/, 4);
+const month = repeat(/\d/, 2);
+const day = repeat(/\d/, 2);
+const date = regex`${named(year, 'year')}-${named(month, 'month')}-${named(day, 'day')}`;
 ```
 
 ## Credits and alternatives

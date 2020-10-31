@@ -12,10 +12,12 @@ import { regex } from './lit';
 export const digit = /\d/;
 export const ws = /\s/;
 export const any = /.*/;
+export const startOfLone = /^/;
+export const endOfLine = /$/;
 
 export const uint = oneOrMore(digit);
 export const int = seq(optional(anyChar('+-')), uint);
-export const decimal = anyOf(int, seq(optional(int), '.', int));
+export const decimal = anyOf(int, seq(optional(int), '.', uint));
 export const float = seq(decimal, optional(seq(anyChar('Ee'), int)));
 export const word = oneOrMore(/\S/);
 

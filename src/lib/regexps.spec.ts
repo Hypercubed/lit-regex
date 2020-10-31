@@ -3,13 +3,16 @@ import { regex } from './lit';
 import { any, decimal, float, int, string, uint, word } from './regexps';
 
 test('expressions', () => {
-  expect(regex`Hello ${word}`).toEqual(/Hello (?:\S)+/);
-  expect(regex`Hello ${uint}`).toEqual(/Hello (?:\d)+/);
-  expect(regex`Hello ${int}`).toEqual(/Hello (?:[\+\x2d])?(?:\d)+/); // eslint-disable-line no-useless-escape
-  expect(regex`Hello ${float}`).toEqual(
-    /Hello (?:(?:(?:[\+\x2d])?(?:\d)+|(?:(?:[\+\x2d])?(?:\d)+)?\.(?:[\+\x2d])?(?:\d)+)(?:[Ee](?:[\+\x2d])?(?:\d)+)?)/ // eslint-disable-line no-useless-escape
+  expect(regex`Hello ${word}`).toEqual(/Hello \S+/);
+  expect(regex`Hello ${uint}`).toEqual(/Hello \d+/);
+  expect(regex`Hello ${int}`).toEqual(/Hello [\+\x2d]?\d+/); // eslint-disable-line no-useless-escape
+  expect(regex`Hello ${decimal}`).toEqual(
+    /Hello (?:[\+\x2d]?\d+|(?:[\+\x2d]?\d+)?\.\d+)/ // eslint-disable-line no-useless-escape
   );
-  expect(regex`Hello ${string}`).toEqual(/Hello (?:"(?:[^"])*"|'(?:[^'])*')/);
+  expect(regex`Hello ${float}`).toEqual(
+    /Hello (?:[\+\x2d]?\d+|(?:[\+\x2d]?\d+)?\.\d+)(?:[Ee][\+\x2d]?\d+)?/ // eslint-disable-line no-useless-escape
+  );
+  expect(regex`Hello ${string}`).toEqual(/Hello (?:"[^"]*"|'[^']*')/);
   expect(regex`Hello ${any}`).toEqual(/Hello .*/);
 });
 

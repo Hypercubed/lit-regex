@@ -4,13 +4,21 @@ import {
   avoid,
   capture,
   flags,
+  group,
   ignoreCase,
   lookAhead,
+  named,
+  oneOrMore,
   optional,
+  repeat,
   seq,
+  zeroOrMore,
 } from './core';
 
 test('seq', () => {
+  expect(seq()).toEqual(/(?:)/);
+  expect(seq('')).toEqual(/(?:)/); // ??
+
   expect(seq('a')).toEqual(/a/);
   expect(seq('a', 'b')).toEqual(/ab/);
   expect(seq('a', 'b', 'c')).toEqual(/abc/);
@@ -28,17 +36,40 @@ test('seq', () => {
 
 test('ignoreCase', () => {
   expect(ignoreCase('WoRld')).toEqual(/[Ww][Oo][Rr][Ll][Dd]/);
+  expect(ignoreCase('Hello world')).toEqual(
+    /[Hh][Ee][Ll][Ll][Oo] [Ww][Oo][Rr][Ll][Dd]/
+  );
 
   expect(ignoreCase('WoRld').test('world')).toBe(true);
 });
 
 test('anyOf', () => {
+  expect(anyOf()).toEqual(/(?:)/); // ??
+
   expect(anyOf('Hello', 'World')).toEqual(/(?:Hello|World)/);
   expect(anyOf('Hello', 'World', 'Earth')).toEqual(/(?:Hello|World|Earth)/);
 
   expect(anyOf('Hello', 'World')).toEqual(/(?:Hello|World)/);
   expect(anyOf(/Hello/, /[Ww]orld/)).toEqual(/(?:Hello|[Ww]orld)/);
   expect(anyOf('Hello', /[Ww]orld/)).toEqual(/(?:Hello|[Ww]orld)/);
+
+  expect(anyOf('a', 'b', 'c')).toEqual(/[abc]/);
+});
+
+test('group', () => {
+  expect(group('World')).toEqual(/(?:World)/);
+
+  expect(group('a')).toEqual(/(?:a)/); // TODO: /a/ ?
+  expect(group('ab')).toEqual(/(?:ab)/);
+  expect(group('abc')).toEqual(/(?:abc)/);
+
+  expect(group(/a/)).toEqual(/(?:a)/); // TODO: /a/ ?
+  expect(group(/ab/)).toEqual(/(?:ab)/);
+  expect(group(/abc/)).toEqual(/(?:abc)/);
+
+  expect(group(['hello', 'world'])).toEqual(/(?:(?:hello|world))/); // TODO: (?:hello|world) ?
+  expect(group([/Hello/, /[Ww]orld/])).toEqual(/(?:(?:Hello|[Ww]orld))/);
+  expect(group(['Hello', /[Ww]orld/])).toEqual(/(?:(?:Hello|[Ww]orld))/);
 });
 
 test('avoid', () => {
@@ -76,12 +107,14 @@ test('capture', () => {
 });
 
 test('optional', () => {
+  expect(optional('a')).toEqual(/a?/);
+
   expect(optional('World')).toEqual(/(?:World)?/);
   expect(optional(/World/)).toEqual(/(?:World)?/);
 
-  expect(optional(['hello', 'world'])).toEqual(/(?:(?:hello|world))?/);
-  expect(optional([/Hello/, /[Ww]orld/])).toEqual(/(?:(?:Hello|[Ww]orld))?/);
-  expect(optional(['Hello', /[Ww]orld/])).toEqual(/(?:(?:Hello|[Ww]orld))?/);
+  expect(optional(['hello', 'world'])).toEqual(/(?:hello|world)?/);
+  expect(optional([/Hello/, /[Ww]orld/])).toEqual(/(?:Hello|[Ww]orld)?/);
+  expect(optional(['Hello', /[Ww]orld/])).toEqual(/(?:Hello|[Ww]orld)?/);
 });
 
 test('all', () => {
@@ -93,6 +126,30 @@ test('all', () => {
   expect(all(['Hello', /[Ww]orld/])).toEqual(/^(?:Hello|[Ww]orld)$/);
 });
 
+test('oneOrMore', () => {
+  expect(oneOrMore('a')).toEqual(/a+/);
+  expect(oneOrMore(/a/)).toEqual(/a+/);
+  expect(oneOrMore(/[abc]/)).toEqual(/[abc]+/);
+
+  expect(oneOrMore('World')).toEqual(/(?:World)+/);
+  expect(oneOrMore(/World/)).toEqual(/(?:World)+/);
+
+  expect(oneOrMore(['hello', 'world'])).toEqual(/(?:hello|world)+/);
+  expect(oneOrMore([/Hello/, /[Ww]orld/])).toEqual(/(?:Hello|[Ww]orld)+/);
+  expect(oneOrMore(['Hello', /[Ww]orld/])).toEqual(/(?:Hello|[Ww]orld)+/);
+});
+
+test('zeroOrMore', () => {
+  expect(zeroOrMore('a')).toEqual(/a*/);
+
+  expect(zeroOrMore('World')).toEqual(/(?:World)*/);
+  expect(zeroOrMore(/World/)).toEqual(/(?:World)*/);
+
+  expect(zeroOrMore(['hello', 'world'])).toEqual(/(?:hello|world)*/);
+  expect(zeroOrMore([/Hello/, /[Ww]orld/])).toEqual(/(?:Hello|[Ww]orld)*/);
+  expect(zeroOrMore(['Hello', /[Ww]orld/])).toEqual(/(?:Hello|[Ww]orld)*/);
+});
+
 test('flags', () => {
   expect(flags('World', 'gmi')).toEqual(/World/gim);
   expect(flags(/World/, 'i')).toEqual(/World/i);
@@ -100,4 +157,22 @@ test('flags', () => {
   expect(flags(['hello', 'world'], 'g')).toEqual(/(?:hello|world)/g);
   expect(flags([/Hello/, /[Ww]orld/], 'm')).toEqual(/(?:Hello|[Ww]orld)/m);
   expect(flags(['Hello', /[Ww]orld/], 'i')).toEqual(/(?:Hello|[Ww]orld)/i);
+});
+
+test('repeat', () => {
+  expect(repeat('a', 1)).toEqual(/a{1}/);
+  expect(repeat(/a/, 2)).toEqual(/a{2}/);
+  expect(repeat(/[abc]/, [3, 6])).toEqual(/[abc]{3,6}/);
+
+  expect(repeat('World', 4)).toEqual(/(?:World){4}/);
+  expect(repeat(/World/, [5, 7])).toEqual(/(?:World){5,7}/);
+});
+
+test('named', () => {
+  expect(named('World', 'planet')).toEqual(/(?<planet>World)/);
+  expect(named(/Hello/, 'greeting')).toEqual(/(?<greeting>Hello)/);
+
+  expect(named(['hello', 'world'], 'greeting')).toEqual(
+    /(?<greeting>(?:hello|world))/
+  );
 });

@@ -1,29 +1,26 @@
 import escape from 'escape-string-regexp';
 
+import { hasTopLevelChoice, isAtomic } from './utils';
+
 export type AcceptedInput = string | RegExp | Array<AcceptedInput>;
 
 function normalize(input: AcceptedInput) {
   if (input instanceof RegExp) return input.source;
   if (Array.isArray(input)) return _anyOf(input);
-  return escape(input);
+  return escape(String(input));
 }
-
-export const empty = new RegExp('');
 
 // *** Sequences **
-function needsGroup(source: string) {
-  if (source.indexOf('|') < 0) return false;
-  if (source.startsWith('(') && source.endsWith(')')) return false;
-  return true;
-}
+export const empty = new RegExp('');
 
 function _seq(args: readonly AcceptedInput[]): string {
   return args
-    .map((a) => {
-      if (args.length > 1 && a instanceof RegExp && needsGroup(a.source)) {
-        return _group(a);
-      }
-      return normalize(a);
+    .map((arg) => {
+      return args.length > 1 &&
+        arg instanceof RegExp &&
+        hasTopLevelChoice(arg.source)
+        ? _group(arg)
+        : normalize(arg);
     })
     .join('');
 }
@@ -42,12 +39,8 @@ export function group(input: AcceptedInput) {
   return new RegExp(_group(input));
 }
 
-function _lookAhead(input: AcceptedInput) {
-  return `(?=${normalize(input)})`;
-}
-
 export function lookAhead(input: AcceptedInput) {
-  return new RegExp(_lookAhead(input));
+  return new RegExp(`(?=${normalize(input)})`);
 }
 
 function _notChar(source: string): string {
@@ -68,46 +61,21 @@ export function avoid(input: AcceptedInput): RegExp {
   return new RegExp(_avoid(input));
 }
 
-function _capture(input: AcceptedInput): string {
-  return `(${normalize(input)})`;
-}
-
 export function capture(input: AcceptedInput): RegExp {
-  return new RegExp(_capture(input));
-}
-
-function _optional(input: AcceptedInput): string {
-  return typeof input === 'string' && input.length === 1
-    ? normalize(input) + '?'
-    : _group(input) + '?';
+  return new RegExp(`(${normalize(input)})`);
 }
 
 export function optional(input: AcceptedInput): RegExp {
-  return new RegExp(_optional(input));
+  return new RegExp((isAtomic(input) ? normalize(input) : _group(input)) + '?');
 }
-
-// TODO: namedCapture
 
 // *** repeats ***
 
-function _oneOrMore(input: AcceptedInput) {
-  return typeof input === 'string' && input.length === 1
-    ? normalize(input) + '+'
-    : _group(input) + '+';
-}
-
 export function oneOrMore(input: AcceptedInput) {
-  return new RegExp(_oneOrMore(input));
+  return new RegExp((isAtomic(input) ? normalize(input) : _group(input)) + '+');
 }
-
-function _zeroOrMore(input: AcceptedInput) {
-  return typeof input === 'string' && input.length === 1
-    ? normalize(input) + '*'
-    : _group(input) + '*';
-}
-
 export function zeroOrMore(input: AcceptedInput) {
-  return new RegExp(_zeroOrMore(input));
+  return new RegExp((isAtomic(input) ? normalize(input) : _group(input)) + '*');
 }
 
 function _anyChar(args: readonly string[]) {
@@ -133,16 +101,13 @@ export function anyOf(...args: readonly AcceptedInput[]) {
 }
 
 // *** Wrappers ***
-function _all(source: AcceptedInput) {
-  return `^${normalize(source)}$`;
+
+export function all(input: AcceptedInput) {
+  return new RegExp(`^${normalize(input)}$`);
 }
 
-export function all(source: AcceptedInput) {
-  return new RegExp(_all(source));
-}
-
-export function ignoreCase(source: AcceptedInput) {
-  source = normalize(source)
+export function ignoreCase(input: AcceptedInput) {
+  input = normalize(input)
     .split('')
     .map((l) => {
       const lc = l.toLowerCase();
@@ -153,9 +118,19 @@ export function ignoreCase(source: AcceptedInput) {
       return l;
     })
     .join('');
-  return new RegExp(source);
+  return new RegExp(input);
 }
 
-export function flags(source: AcceptedInput, opts: string) {
-  return new RegExp(normalize(source), opts);
+export function flags(input: AcceptedInput, opts: string) {
+  return new RegExp(normalize(input), opts);
+}
+
+export function repeat(input: AcceptedInput, N: number | [number, number]) {
+  return new RegExp(
+    (isAtomic(input) ? normalize(input) : _group(input)) + `{${N}}`
+  );
+}
+
+export function named(input: AcceptedInput, name: string): RegExp {
+  return new RegExp(`(?<${name}>${normalize(input)})`);
 }
