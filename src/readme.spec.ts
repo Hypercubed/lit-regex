@@ -2,7 +2,7 @@ import {
   anyOf,
   avoid,
   capture,
-  lookAhead,
+  ahead,
   oneOrMore,
   optional,
   regex,
@@ -55,12 +55,12 @@ test('anyOf', () => {
   expect(anyOf('Hello', /[Ww]orld/)).toEqual(/(?:Hello|[Ww]orld)/);
 });
 
-test('lookAhead', () => {
-  expect(lookAhead('Hello')).toEqual(/(?=Hello)/);
+test('ahead', () => {
+  expect(ahead('Hello')).toEqual(/(?=Hello)/);
 
-  expect(lookAhead(/[Ww]orld/)).toEqual(/(?=[Ww]orld)/);
+  expect(ahead(/[Ww]orld/)).toEqual(/(?=[Ww]orld)/);
 
-  expect(lookAhead([/Hello/, /[Ww]orld/])).toEqual(/(?=(?:Hello|[Ww]orld))/);
+  expect(ahead([/Hello/, /[Ww]orld/])).toEqual(/(?=(?:Hello|[Ww]orld))/);
 });
 
 test('capture', () => {

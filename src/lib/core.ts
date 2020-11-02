@@ -82,7 +82,7 @@ export function _group(source: string): string {
   return isAtomic(source) ? source : `(?:${source})`
 }
 
-export function lookAhead(input: AcceptedInput) {
+export function ahead(input: AcceptedInput) {
   return new RegExp(
     `(?=${normalize(input)})`,
     isIgnoreCase(input) ? 'i' : ''

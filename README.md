@@ -106,18 +106,18 @@ anyOf('Hello', /[Ww]orld/);
 // same as /(?:Hello|[Ww]orld)/
 ```
 
-### `lookAhead(arg)`
+### `ahead(arg)`
 
 The single argument is treated according to the expression rules listed above and returned in a look-ahead group.
 
 ```js
-lookAhead('Hello');
+ahead('Hello');
 // same as /(?=Hello)/
 
-lookAhead(/[Ww]orld/);
+ahead(/[Ww]orld/);
 // same as /(?=[Ww]orld)/
 
-lookAhead([/Hello/, /[Ww]orld/]);
+ahead([/Hello/, /[Ww]orld/]);
 // same as /(?=(?:Hello|[Ww]orld))/
 ```
 
@@ -132,13 +132,13 @@ capture('Hello');
 capture(/[Ww]orld/);
 // same as /([Ww]orld)/
 
-lookAhead(['Hello', /[Ww]orld/]);
+ahead(['Hello', /[Ww]orld/]);
 // same as /((?:Hello|[Ww]orld))/
 ```
 
 ### `avoid(arg)`
 
-The single argument is treated according to the expression rules listed above and returned in a negative lookahead.
+The single argument is treated according to the expression rules listed above and returned in a negative ahead.
 
 ```js
 avoid('Hello');

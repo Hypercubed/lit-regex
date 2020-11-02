@@ -5,7 +5,7 @@ import {
   capture,
   flags,
   ignoreCase,
-  lookAhead,
+  ahead,
   named,
   oneOrMore,
   optional,
@@ -91,16 +91,16 @@ test('avoid', () => {
   expect(avoid(/hello/i)).toEqual(/(?!hello)/i);
 });
 
-test('lookAhead', () => {
-  expect(lookAhead('World')).toEqual(/(?=World)/);
-  expect(lookAhead(/[Ww]orld/)).toEqual(/(?=[Ww]orld)/);
+test('ahead', () => {
+  expect(ahead('World')).toEqual(/(?=World)/);
+  expect(ahead(/[Ww]orld/)).toEqual(/(?=[Ww]orld)/);
 
-  expect(lookAhead(['hello', 'world'])).toEqual(/(?=(?:hello|world))/);
-  expect(lookAhead([/Hello/, /[Ww]orld/])).toEqual(/(?=(?:Hello|[Ww]orld))/);
-  expect(lookAhead(['Hello', /[Ww]orld/])).toEqual(/(?=(?:Hello|[Ww]orld))/);
+  expect(ahead(['hello', 'world'])).toEqual(/(?=(?:hello|world))/);
+  expect(ahead([/Hello/, /[Ww]orld/])).toEqual(/(?=(?:Hello|[Ww]orld))/);
+  expect(ahead(['Hello', /[Ww]orld/])).toEqual(/(?=(?:Hello|[Ww]orld))/);
 
-  expect(lookAhead(/a/i)).toEqual(/(?=a)/i);
-  expect(lookAhead(/hello/i)).toEqual(/(?=hello)/i);
+  expect(ahead(/a/i)).toEqual(/(?=a)/i);
+  expect(ahead(/hello/i)).toEqual(/(?=hello)/i);
 });
 
 test('capture', () => {

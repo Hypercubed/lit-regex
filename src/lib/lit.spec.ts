@@ -1,4 +1,4 @@
-import { anyOf, avoid, capture, ignoreCase, lookAhead } from './core';
+import { anyOf, avoid, capture, ignoreCase, ahead } from './core';
 import { regex } from './lit';
 
 test('strings and regex', () => {
@@ -45,9 +45,9 @@ test('avoid', () => {
   expect(regex`Hello ${avoid(/[Ww]orld/)}`).toEqual(/Hello (?![Ww]orld)/);
 });
 
-test('lookAhead', () => {
-  expect(regex`Hello ${lookAhead('World')}`).toEqual(/Hello (?=World)/);
-  expect(regex`Hello ${lookAhead(/[Ww]orld/)}`).toEqual(/Hello (?=[Ww]orld)/);
+test('ahead', () => {
+  expect(regex`Hello ${ahead('World')}`).toEqual(/Hello (?=World)/);
+  expect(regex`Hello ${ahead(/[Ww]orld/)}`).toEqual(/Hello (?=[Ww]orld)/);
 });
 
 test('capture', () => {
