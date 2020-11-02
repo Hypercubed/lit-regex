@@ -6,7 +6,7 @@ export function regex(
 ) {
   const result: AcceptedInput[] = strings[0] ? [strings[0]] : [];
   args.forEach((arg, i) => {
-    result.push(arg)
+    result.push(arg);
     if (strings[i + 1]) {
       result.push(strings[i + 1]);
     }

@@ -1,17 +1,16 @@
+import clone from 'clone-regexp';
 import escape from 'escape-string-regexp';
+import isRegexp from 'is-regexp';
 
 import { hasTopLevelChoice, isAtomic } from './utils';
 
 export type AcceptedInput = string | RegExp | Array<AcceptedInput>;
 
 function normalize(input: AcceptedInput): string {
-  if (input instanceof RegExp) return input.ignoreCase ? _ignoreCase(input.source) : input.source;
+  if (isRegexp(input))
+    return input.ignoreCase ? _ignoreCase(input.source) : input.source;
   if (Array.isArray(input)) return _anyOf(input.map(normalize));
   return escape(String(input));
-}
-
-function clone(re: RegExp, flags?: string) {
-  return new RegExp(re.source, typeof flags !== 'undefined' ? flags : re.flags);
 }
 
 // *** Sequences **
@@ -21,19 +20,25 @@ function _seq(args: string[]): string {
   const needsGroups = args.length > 1;
   return args
     .map((arg) => {
-      return needsGroups && hasTopLevelChoice(arg)
-        ? `(?:${arg})`
-        : arg;
+      return needsGroups && hasTopLevelChoice(arg) ? `(?:${arg})` : arg;
     })
     .join('');
 }
 
 export function seq(...args: readonly AcceptedInput[]): RegExp {
   if (!args.length) return empty;
-  if (args.length === 1 && args[0] instanceof RegExp) return clone(args[0]);  // if only one regexp, return a clone
-  const allIgnoreCase = args.every(arg => arg instanceof RegExp && arg.ignoreCase);
+  if (args.length === 1 && isRegexp(args[0]))
+    return clone(args[0], { lastIndex: 0 }); // if only one regexp, return a clone
+  const allIgnoreCase = args.every((arg) => isRegexp(arg) && arg.ignoreCase);
   if (allIgnoreCase) {
-    return new RegExp(_seq(args.map(a => normalize(clone(a as RegExp, '')))), 'i'); // if all are regexp and case ignored; move ignore flag to top
+    return new RegExp(
+      _seq(
+        args.map((a) =>
+          normalize(clone(a as RegExp, { ignoreCase: false, lastIndex: 0 }))
+        )
+      ),
+      'i'
+    ); // if all are regexp and case ignored; move ignore flag to top
   }
   return new RegExp(_seq(args.map(normalize)));
 }
@@ -60,9 +65,7 @@ export function notChar(source: string): RegExp {
 }
 
 function _avoid(source: string): string {
-  return /^\w$/.test(source)
-    ? _notChar(source)
-    : `(?!${source})`;
+  return /^\w$/.test(source) ? _notChar(source) : `(?!${source})`;
 }
 
 export function avoid(input: AcceptedInput): RegExp {
@@ -75,19 +78,25 @@ export function capture(input: AcceptedInput): RegExp {
 
 export function optional(input: AcceptedInput): RegExp {
   const normalized = normalize(input);
-  return new RegExp(isAtomic(normalized) ? `${normalized}?` : `(?:${normalized})?`);
+  return new RegExp(
+    isAtomic(normalized) ? `${normalized}?` : `(?:${normalized})?`
+  );
 }
 
 // *** repeats ***
 
 export function oneOrMore(input: AcceptedInput) {
   const normalized = normalize(input);
-  return new RegExp(isAtomic(normalized) ? `${normalized}+` : `(?:${normalized})+`);
+  return new RegExp(
+    isAtomic(normalized) ? `${normalized}+` : `(?:${normalized})+`
+  );
 }
 
 export function zeroOrMore(input: AcceptedInput) {
   const normalized = normalize(input);
-  return new RegExp(isAtomic(normalized) ? `${normalized}*` : `(?:${normalized})*`);
+  return new RegExp(
+    isAtomic(normalized) ? `${normalized}*` : `(?:${normalized})*`
+  );
 }
 
 function _anyChar(args: readonly string[]) {
@@ -99,10 +108,8 @@ export function anyChar(...args: readonly string[]) {
 }
 
 export function _anyOf(args: string[]): string {
-  const allChars = args.every(s => /^\w$/.test(s));
-  return allChars
-    ? _anyChar(args)
-    : `(?:${args.join('|')})`;
+  const allChars = args.every((s) => /^\w$/.test(s));
+  return allChars ? _anyChar(args) : `(?:${args.join('|')})`;
 }
 
 export function anyOf(...args: readonly AcceptedInput[]) {
@@ -117,7 +124,7 @@ export function all(input: AcceptedInput) {
 }
 
 export function _ignoreCase(source: string) {
-  return source.replace(/\\\\[\s\S]|[A-Za-z]/g, s => {
+  return source.replace(/\\\\[\s\S]|[A-Za-z]/g, (s) => {
     if (s.length === 1) {
       const cu = s.charCodeAt(0) & ~32;
       if (65 <= cu && cu <= 90) {
@@ -129,7 +136,8 @@ export function _ignoreCase(source: string) {
 }
 
 export function ignoreCase(input: AcceptedInput) {
-  if (input instanceof RegExp && input.ignoreCase) return clone(input);
+  if (isRegexp(input) && input.ignoreCase)
+    return clone(input, { lastIndex: 0 });
   return new RegExp(normalize(input), 'i');
 }
 
@@ -139,7 +147,9 @@ export function flags(input: AcceptedInput, opts: string) {
 
 export function repeat(input: AcceptedInput, N: number | [number, number]) {
   const normalized = normalize(input);
-  return new RegExp(isAtomic(normalized) ? `${normalized}{${N}}` : `(?:${normalized}){${N}}`);
+  return new RegExp(
+    isAtomic(normalized) ? `${normalized}{${N}}` : `(?:${normalized}){${N}}`
+  );
 }
 
 export function named(input: AcceptedInput, name: string): RegExp {

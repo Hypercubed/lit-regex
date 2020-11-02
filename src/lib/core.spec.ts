@@ -51,7 +51,7 @@ test('ignoreCase', () => {
 
   expect(seq(/a/i, 'b')).toEqual(/[Aa]b/);
 
-  expect(ignoreCase(seq(/a/i, 'b'))).toEqual(/[Aa]b/i);  // TODO: /ab/i ?
+  expect(ignoreCase(seq(/a/i, 'b'))).toEqual(/[Aa]b/i); // TODO: /ab/i ?
 
   expect(ignoreCase(ignoreCase('WoRld'))).toEqual(/WoRld/i);
 });
@@ -189,4 +189,3 @@ test('named', () => {
     /(?<greeting>(?:hello|world))/
   );
 });
-

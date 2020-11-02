@@ -4,7 +4,7 @@ A RegExp templating library for JavaScript
 
 ## Overview
 
-There are a few existing JavaScript tools for composing regular expressions (see, for example, [re-template-tag](https://github.com/rauschma/re-template-tag)).  However, all of these assume the users is writing primarily regex. There are many cases were most of the text will be plaintext requiring escaping. For example, if I wanted to match the string "Apples for $0.99 (per lb)" I would need the regexp `/Apples for \$0\.99 \(per lb\)/`.  Did you forget to escape anything?  Start trying to compose a regexp using strings and the problem is exasperated.
+There are a few existing JavaScript tools for composing regular expressions (see, for example, [re-template-tag](https://github.com/rauschma/re-template-tag) and [regexp-make-js](https://github.com/mikesamuel/regexp-make-js)).  However, all of these assume the users is writing primarily regex. There are many cases were most of the text will be plaintext requiring escaping. For example, if I wanted to match the string "Apples for $0.99 (per lb)" I would need the regexp `/Apples for \$0\.99 \(per lb\)/`.  Did you forget to escape anything?  Start trying to compose a regexp using strings and the problem is exasperated.
 
 `lit-regex` lets you write readable regular expressions in JavaScript using [template literals](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals). `lit-regex` templates are plain text strings that allow embedded regular expressions for composability.
 
@@ -16,42 +16,44 @@ npm i --save-dev lit-regex
 
 ## Usage
 
-Expanding on the example above.  Suppose we want to match the string "XXX for $YY.YY (per lb)" were `XXX` can be "Apples" or "Oranges" (first letter case-insensitive) and `YY.YY` is any price.  Maybe you're sufficiently familiar with regular expressions to write:
+Expanding on the example above.  Suppose we want to match the string "XXX for $YY.YY [per #]" were `XXX` can be `/apples/i` or `/oranges/` (case-insensitive) and `YY.YY` is any price.  Maybe you're sufficiently familiar with regular expressions to write:
 
 ```ts
-const re = /We sell (?:[Aa]pples|[Oo]ranges) for \$\d+\.\d+ \(per lb\)/;
+const re = /We sell (?:[Aa][Pp][Pp][Ll][Ee][Ss]|[Oo][Rr][Aa][Nn][Gg][Ee][Ss]) for \$\d+\.\d{2} \[per #\]\./;
 ```
 
-or in a composable form:
+Not exactly readable.  Not lets try doing the same via composition:
 
 ```ts
-const int = /\d+/;
-const price = `\\$${int.source}\\.${int.source}`;
-const products = /(?:[Aa]pples|[Oo]ranges)/;
-const re = new RegExp(`We sell ${products.source} for ${price} \\[each\\]\\.`);
+const digit = /\d/;
+const price = `\\$${digit.source}+\\.${digit.source}{2}`;
+const products = /(?:[Aa][Pp][Pp][Ll][Ee][Ss]|[Oo][Rr][Aa][Nn][Gg][Ee][Ss])/;
+const re = new RegExp(`We sell ${products.source} for ${price} \\[per #\\]\\.`);
 ```
 
 Notice a few difficulties here:
 
-* Since `int` and `products` are RegExp objects we need to use `.source` to get the source regexp.
-* Exact t test matches need to be escaped.
+* Since `digit` and `products` are RegExp objects we need to use `.source` to get the source regexp.
+* Making `products` case insensitive is a pain.
+* Exact text matches need to be escaped.
 * Regular expressions within the string need to be double escaped.
 
 Using `lit-regex` we could write:
 
 ```js
-import { regex } from 'lit-regex';
+import { regex, oneOrMore, repeat } from 'lit-regex';
 
-const int = /\d+/;
-const price = regex`$${int}.${int}`;
-const products = [/[Aa]pples/, /[Oo]ranges/];
-const re = regex`We sell ${products} for ${price} [each].`;
+const digit = /\d/;
+const price = regex`$${oneOrMore(digit)}.${repeat(digit, 2)}`;
+const products = [/apples/i, /oranges/i];
+const re = regex`We sell ${products} for ${price} [per #].`;
+// same as /We sell (?:[Aa][Pp][Pp][Ll][Ee][Ss]|[Oo][Rr][Aa][Nn][Gg][Ee][Ss]) for \$\d+\.\d{2} \[each\]\./
 ```
 
 A few simple rules to notice:
 
 * If an expression is a string, it is escaped for literal matching; this includes the static potions of the template string.
-* If an expression is a `RegExp`, the regular expression i embeded as a substring match (flags are ignored).
+* If an expression is a `RegExp`, the regular expression is embedded as a substring match (`i` flag is preserved).
 * If an expression is an Array, it is treated as an alternation (OR operand) and each item within the array are treated with these same rules.
 
 ## Functional API
@@ -65,23 +67,23 @@ Most of the power of `lit-regex` is in the `regex` template tag; which is effect
 The example above could be rewritten using the composition functions:
 
 ```js
-import { seq } from 'lit-regex';
+import { seq, oneOrMore, repeat, anyOf } from 'lit-regex';
 
-const int = /\d+/;
-const price = seq('$', int, '.', int);
-const products = anyOf(/[Aa]pples/, /[Oo]ranges/);
-const re = seq('We sell ', products, ' for ', price, ' [each].');
+const digit = /\d/;
+const price = seq('$', oneOrMore(digit), '.', repeat(digit, 2));
+const products = anyOf(/apples/i, /oranges/i);
+const re = seq('We sell ', products, ' for ', price, ' [per #].');
 ```
 
 or a combination of functions and string literals:
 
 ```js
-import { seq } from 'lit-regex';
+import { regex, seq, oneOrMore, repeat, anyOf } from 'lit-regex';
 
-const int = /\d+/;
-const price = seq('$', int, '.', int);
-const products = anyOf(/[Aa]pples/, /[Oo]ranges/);
-const re = regex`We sell ${products} for ${price} [each].`;
+const digit = /\d/;
+const price = seq('$', oneOrMore(digit), '.', repeat(digit, 2));
+const products = anyOf(/apples/i, /oranges/i);
+const re = regex`We sell ${products} for ${price} [per #].`;
 ```
 
 Each function is explained below:
@@ -173,7 +175,7 @@ avoid(/[Ww]orld/);
 // same as /(?:[Ww]orld)?/
 
 avoid(['Hello', /[Ww]orld/]);
-// same as /(?:(?:Hello|[Ww]orld))?/
+// same as /(?:Hello|[Ww]orld)?/
 ```
 
 ### `oneOrMore(arg)`
@@ -186,10 +188,10 @@ oneOrMore(/[Ww]orld/);
 // same as /(?:[Ww]orld)+/
 
 oneOrMore(['Hello', /[Ww]orld/]);
-// same as /(?:(?:Hello|[Ww]orld))+/
+// same as /(?:Hello|[Ww]orld)+/
 ```
 
-### `oneOrMore(arg)`
+### `zeroOrMore(arg)`
 
 ```js
 zeroOrMore('Hello');
@@ -199,7 +201,20 @@ zeroOrMore(/[Ww]orld/);
 // same as /(?:[Ww]orld)*/
 
 zeroOrMore(['Hello', /[Ww]orld/]);
-// same as /(?:(?:Hello|[Ww]orld))*/
+// same as /(?:Hello|[Ww]orld)*/
+```
+
+### `repeat(arg)`
+
+```js
+repeat('Hello', 2);
+// same as /(?:Hello){2}/
+
+repeat(/[Ww]orld/, [2, 3]);
+// same as /(?:[Ww]orld){2,3}/
+
+repeat(['Hello', /[Ww]orld/], 5);
+// same as /(?:Hello|[Ww]orld){5}/
 ```
 
 ## More examples

@@ -56,8 +56,12 @@ test('capture', () => {
 });
 
 test('ignore case', () => {
-  expect(regex`Hello ${ignoreCase('World')}`).toEqual(/Hello [Ww][Oo][Rr][Ll][Dd]/);
-  expect(regex`Hello ${ignoreCase(/world/)}`).toEqual(/Hello [Ww][Oo][Rr][Ll][Dd]/);
+  expect(regex`Hello ${ignoreCase('World')}`).toEqual(
+    /Hello [Ww][Oo][Rr][Ll][Dd]/
+  );
+  expect(regex`Hello ${ignoreCase(/world/)}`).toEqual(
+    /Hello [Ww][Oo][Rr][Ll][Dd]/
+  );
   expect(regex`Hello ${/world/i}`).toEqual(/Hello [Ww][Oo][Rr][Ll][Dd]/);
 
   expect(regex`${/World/i}`).toEqual(/World/i);
