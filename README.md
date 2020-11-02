@@ -106,18 +106,6 @@ anyOf('Hello', /[Ww]orld/);
 // same as /(?:Hello|[Ww]orld)/
 ```
 
-### `group(arg)`
-
-The single argument is treated according to the expression rules listed above and returned in a non-capturing group.
-
-```js
-group('Hello');
-// same as /(?:Hello)/
-
-group(/[Ww]orld/);
-// same as /(?:[Ww]orld)/
-```
-
 ### `lookAhead(arg)`
 
 The single argument is treated according to the expression rules listed above and returned in a look-ahead group.

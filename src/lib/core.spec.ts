@@ -4,7 +4,6 @@ import {
   avoid,
   capture,
   flags,
-  group,
   ignoreCase,
   lookAhead,
   named,
@@ -51,7 +50,7 @@ test('ignoreCase', () => {
 
   expect(seq(/a/i, 'b')).toEqual(/[Aa]b/);
 
-  expect(ignoreCase(seq(/a/i, 'b'))).toEqual(/[Aa]b/i); // TODO: /ab/i ?
+  expect(ignoreCase(seq(/a/i, 'b'))).toEqual(/[Aa]b/i);
 
   expect(ignoreCase(ignoreCase('WoRld'))).toEqual(/WoRld/i);
 });
@@ -67,22 +66,10 @@ test('anyOf', () => {
   expect(anyOf('Hello', /[Ww]orld/)).toEqual(/(?:Hello|[Ww]orld)/);
 
   expect(anyOf('a', 'b', 'c')).toEqual(/[abc]/);
-});
 
-test('group', () => {
-  expect(group('World')).toEqual(/(?:World)/);
-
-  expect(group('a')).toEqual(/(?:a)/); // TODO: /a/ ?
-  expect(group('ab')).toEqual(/(?:ab)/);
-  expect(group('abc')).toEqual(/(?:abc)/);
-
-  expect(group(/a/)).toEqual(/(?:a)/); // TODO: /a/ ?
-  expect(group(/ab/)).toEqual(/(?:ab)/);
-  expect(group(/abc/)).toEqual(/(?:abc)/);
-
-  expect(group(['hello', 'world'])).toEqual(/(?:(?:hello|world))/); // TODO: (?:hello|world) ?
-  expect(group([/Hello/, /[Ww]orld/])).toEqual(/(?:(?:Hello|[Ww]orld))/);
-  expect(group(['Hello', /[Ww]orld/])).toEqual(/(?:(?:Hello|[Ww]orld))/);
+  expect(anyOf(/a/i)).toEqual(/a/i);
+  expect(anyOf(/a/i, 'b')).toEqual(/(?:[Aa]|b)/);
+  expect(anyOf(/a/i, /b/i)).toEqual(/[ab]/i);
 });
 
 test('avoid', () => {
@@ -99,6 +86,9 @@ test('avoid', () => {
   expect(avoid(['hello', 'world'])).toEqual(/(?!(?:hello|world))/);
   expect(avoid([/Hello/, /[Ww]orld/])).toEqual(/(?!(?:Hello|[Ww]orld))/);
   expect(avoid(['Hello', /[Ww]orld/])).toEqual(/(?!(?:Hello|[Ww]orld))/);
+
+  expect(avoid(/a/i)).toEqual(/[^a]/i);
+  expect(avoid(/hello/i)).toEqual(/(?!hello)/i);
 });
 
 test('lookAhead', () => {
@@ -108,6 +98,9 @@ test('lookAhead', () => {
   expect(lookAhead(['hello', 'world'])).toEqual(/(?=(?:hello|world))/);
   expect(lookAhead([/Hello/, /[Ww]orld/])).toEqual(/(?=(?:Hello|[Ww]orld))/);
   expect(lookAhead(['Hello', /[Ww]orld/])).toEqual(/(?=(?:Hello|[Ww]orld))/);
+
+  expect(lookAhead(/a/i)).toEqual(/(?=a)/i);
+  expect(lookAhead(/hello/i)).toEqual(/(?=hello)/i);
 });
 
 test('capture', () => {
@@ -117,6 +110,9 @@ test('capture', () => {
   expect(capture(['hello', 'world'])).toEqual(/((?:hello|world))/);
   expect(capture([/Hello/, /[Ww]orld/])).toEqual(/((?:Hello|[Ww]orld))/);
   expect(capture(['Hello', /[Ww]orld/])).toEqual(/((?:Hello|[Ww]orld))/);
+
+  expect(capture(/a/i)).toEqual(/(a)/i);
+  expect(capture(/hello/i)).toEqual(/(hello)/i);
 });
 
 test('optional', () => {
@@ -128,6 +124,9 @@ test('optional', () => {
   expect(optional(['hello', 'world'])).toEqual(/(?:hello|world)?/);
   expect(optional([/Hello/, /[Ww]orld/])).toEqual(/(?:Hello|[Ww]orld)?/);
   expect(optional(['Hello', /[Ww]orld/])).toEqual(/(?:Hello|[Ww]orld)?/);
+
+  expect(optional(/a/i)).toEqual(/a?/i);
+  expect(optional(/hello/i)).toEqual(/(?:hello)?/i);
 });
 
 test('all', () => {
@@ -150,6 +149,9 @@ test('oneOrMore', () => {
   expect(oneOrMore(['hello', 'world'])).toEqual(/(?:hello|world)+/);
   expect(oneOrMore([/Hello/, /[Ww]orld/])).toEqual(/(?:Hello|[Ww]orld)+/);
   expect(oneOrMore(['Hello', /[Ww]orld/])).toEqual(/(?:Hello|[Ww]orld)+/);
+
+  expect(oneOrMore(/a/i)).toEqual(/a+/i);
+  expect(oneOrMore(/hello/i)).toEqual(/(?:hello)+/i);
 });
 
 test('zeroOrMore', () => {
@@ -161,6 +163,9 @@ test('zeroOrMore', () => {
   expect(zeroOrMore(['hello', 'world'])).toEqual(/(?:hello|world)*/);
   expect(zeroOrMore([/Hello/, /[Ww]orld/])).toEqual(/(?:Hello|[Ww]orld)*/);
   expect(zeroOrMore(['Hello', /[Ww]orld/])).toEqual(/(?:Hello|[Ww]orld)*/);
+
+  expect(zeroOrMore(/a/i)).toEqual(/a*/i);
+  expect(zeroOrMore(/hello/i)).toEqual(/(?:hello)*/i);
 });
 
 test('flags', () => {
@@ -179,6 +184,9 @@ test('repeat', () => {
 
   expect(repeat('World', 4)).toEqual(/(?:World){4}/);
   expect(repeat(/World/, [5, 7])).toEqual(/(?:World){5,7}/);
+
+  expect(repeat(/a/i, 3)).toEqual(/a{3}/i);
+  expect(repeat(/hello/i, [1,5])).toEqual(/(?:hello){1,5}/i);
 });
 
 test('named', () => {
@@ -188,4 +196,7 @@ test('named', () => {
   expect(named(['hello', 'world'], 'greeting')).toEqual(
     /(?<greeting>(?:hello|world))/
   );
+
+  expect(named(/a/i, 'letter')).toEqual(/(?<letter>a)/i);
+  expect(named(/hello/i, 'greet')).toEqual(/(?<greet>hello)/i);
 });
