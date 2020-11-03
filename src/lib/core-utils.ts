@@ -1,7 +1,7 @@
 import escapeRegex from 'escape-string-regexp';
 import isRegexp from 'is-regexp';
 
-import { anyOf, capture, ignoreCase } from './source-utils';
+import { s_anyOf, s_capture, s_ignoreCase } from './source-utils';
 
 export type AcceptedInput = string | RegExp | InputArray | InputObject;
 
@@ -10,36 +10,32 @@ type InputObject = { [key: string]: AcceptedInput };
 
 // TODO: convert multiline /^hello$/m -> /(?<=^|[\n\r])hello(?=$|[\n\r])/ ?
 
+const CAPTURE_NAME = /^[A-Za-z][A-Za-z\d]*/;
+
 export function normalize(
   input: AcceptedInput,
-  ignoreIgnoreCasing = true
+  ignoreFlags = true
 ): string {
-  const _ignoreCase = isIgnoreCase(input);
-  ignoreIgnoreCasing = ignoreIgnoreCasing || !_ignoreCase;
+  const overallIgnoreCaseFlag = isIgnoreCase(input);
 
   let source;
 
   if (isRegexp(input)) {
     source = input.source;
   } else if (Array.isArray(input)) {
-    source = anyOf(_map(input, _ignoreCase));
+    source = s_anyOf(map(input, overallIgnoreCaseFlag));
   } else if (typeof input === 'object') {
-    source = anyOf(
+    source = s_anyOf(
       Object.keys(input).map((key) => {
-        return capture(normalize(input[key], _ignoreCase), makeValidKey(key));
+        return s_capture(normalize(input[key], overallIgnoreCaseFlag), CAPTURE_NAME.test(key) ? key : '');
       })
     );
   } else {
     source = escapeRegex(String(input));
   }
 
-  return ignoreIgnoreCasing ? source : ignoreCase(source);
-}
-
-const NAMED = /^[A-Za-z][A-Za-z\d]*/;
-
-function makeValidKey(key: string) {
-  return NAMED.test(key) ? key : '';
+  const addIgnoreCasingFlag = !ignoreFlags && overallIgnoreCaseFlag;
+  return addIgnoreCasingFlag ? s_ignoreCase(source) : source;
 }
 
 export function isIgnoreCase(input: AcceptedInput): boolean {
@@ -64,6 +60,6 @@ export function joinFlags(input: AcceptedInput, flags: string) {
     }, flags);
 }
 
-export function _map(args: AcceptedInput[], ignoreCasing = true) {
-  return args.map((arg) => normalize(arg, ignoreCasing));
+export function map(args: AcceptedInput[], ignoreFlags = true) {
+  return args.map((arg) => normalize(arg, ignoreFlags));
 }

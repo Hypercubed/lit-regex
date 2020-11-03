@@ -1,5 +1,5 @@
 import {
-  _map,
+  map,
   AcceptedInput,
   getFlags,
   isIgnoreCase,
@@ -7,14 +7,14 @@ import {
   normalize,
 } from './core-utils';
 import {
-  anyChar as _anyChar,
-  anyOf as _anyOf,
-  avoid as _avoid,
-  capture as _capture,
-  seq as _seq,
-  chars,
-  guaranteeAtomic,
-  suffix,
+  s_anyChar,
+  s_anyOf,
+  s_avoid,
+  s_capture,
+  s_seq,
+  s_guaranteeAtomic,
+  s_suffix,
+  s_chars,
 } from './source-utils';
 
 // *** Sequences **
@@ -23,13 +23,13 @@ export const empty = new RegExp('');
 export function seq(...args: AcceptedInput[]): RegExp {
   if (!args.length) return empty;
   const hoistCasing = isIgnoreCase(args);
-  return new RegExp(_seq(_map(args, hoistCasing)), hoistCasing ? 'i' : '');
+  return new RegExp(s_seq(map(args, hoistCasing)), hoistCasing ? 'i' : '');
 }
 
 export function anyOf(...args: AcceptedInput[]): RegExp {
   if (!args.length) return empty;
   const hoistCasing = isIgnoreCase(args);
-  return new RegExp(_anyOf(_map(args, hoistCasing)), hoistCasing ? 'i' : '');
+  return new RegExp(s_anyOf(map(args, hoistCasing)), hoistCasing ? 'i' : '');
 }
 
 // *** Groups **
@@ -39,27 +39,27 @@ export function ahead(input: AcceptedInput): RegExp {
 }
 
 export function anyChar(arg: string): RegExp {
-  return new RegExp(_anyChar(_map(arg.split(''))));
+  return new RegExp(s_anyChar(map(arg.split(''))));
 }
 
 export function notChar(source: string): RegExp {
-  return new RegExp(chars(normalize(source), true));
+  return new RegExp(s_chars(normalize(source), true));
 }
 
 export function avoid(input: AcceptedInput): RegExp {
-  return new RegExp(_avoid(normalize(input)), isIgnoreCase(input) ? 'i' : '');
+  return new RegExp(s_avoid(normalize(input)), isIgnoreCase(input) ? 'i' : '');
 }
 
 export function capture(input: AcceptedInput, name?: string): RegExp {
   return new RegExp(
-    _capture(normalize(input), name),
+    s_capture(normalize(input), name),
     isIgnoreCase(input) ? 'i' : ''
   );
 }
 
 export function optional(input: AcceptedInput): RegExp {
   return new RegExp(
-    `${guaranteeAtomic(normalize(input))}?`,
+    `${s_guaranteeAtomic(normalize(input))}?`,
     isIgnoreCase(input) ? 'i' : ''
   );
 }
@@ -68,14 +68,14 @@ export function optional(input: AcceptedInput): RegExp {
 
 export function oneOrMore(input: AcceptedInput) {
   return new RegExp(
-    suffix(normalize(input), '+'),
+    s_suffix(normalize(input), '+'),
     isIgnoreCase(input) ? 'i' : ''
   );
 }
 
 export function zeroOrMore(input: AcceptedInput) {
   return new RegExp(
-    suffix(normalize(input), '*'),
+    s_suffix(normalize(input), '*'),
     isIgnoreCase(input) ? 'i' : ''
   );
 }
@@ -96,7 +96,7 @@ export function repeat(
   }
 
   return new RegExp(
-    suffix(normalize(input), _suffix),
+    s_suffix(normalize(input), _suffix),
     isIgnoreCase(input) ? 'i' : ''
   );
 }
