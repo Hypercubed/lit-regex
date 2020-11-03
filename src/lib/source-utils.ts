@@ -54,7 +54,7 @@ const ATOMIC = /^\\[^]$|^\[(?:\\[^]|[^\]])*\]$/;
 /**
  * Determines if an source is atomic
  * from https://github.com/pygy/compose-regexp.js/blob/master/compose-regexp.js
- * 
+ *
  * exported only for testing
  */
 export function s_isAtomic(source: string) {

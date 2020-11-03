@@ -38,7 +38,7 @@ test('objects', () => {
   expect(regex`Hello ${{ planet: ['World', 'Earth'] }}`).toEqual(
     /Hello (?<planet>(?:World|Earth))/
   );
-  expect(regex`Hello ${{ world: 'World', earth: 'Earth' }}`).toEqual(
+  expect(regex`Hello ${[{ world: 'World' }, { earth: 'Earth' }]}`).toEqual(
     /Hello (?:(?<world>World)|(?<earth>Earth))/
   );
 
@@ -69,7 +69,7 @@ test('objects', () => {
 
   expect(regex`${{ a: 'b' }}`).toEqual(/(?<a>b)/);
 
-  expect(regex`${{ greeting: 'hello', planet: /world/i }}`).toEqual(
+  expect(regex`${[{ greeting: 'hello' }, { planet: /world/i }]}`).toEqual(
     /(?:(?<greeting>hello)|(?<planet>[Ww][Oo][Rr][Ll][Dd]))/
   );
 });

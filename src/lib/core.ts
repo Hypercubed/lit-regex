@@ -1,9 +1,9 @@
 import {
-  map,
   AcceptedInput,
   getFlags,
   isIgnoreCase,
   joinFlags,
+  map,
   normalize,
 } from './core-utils';
 import {
@@ -11,10 +11,10 @@ import {
   s_anyOf,
   s_avoid,
   s_capture,
-  s_seq,
-  s_guaranteeAtomic,
-  s_suffix,
   s_chars,
+  s_guaranteeAtomic,
+  s_seq,
+  s_suffix,
 } from './source-utils';
 
 // *** Sequences **

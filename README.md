@@ -16,10 +16,10 @@ npm i --save-dev lit-regex
 
 ## Usage
 
-Expanding on the example above.  Suppose we want to match the string "XXX for $YY.YY [per #]" were `XXX` can be `/apples/i` or `/oranges/i` (case-insensitive) and `YY.YY` is any price.  Maybe you're sufficiently familiar with regular expressions to write:
+Expanding on the example above.  Suppose we want to match the string "We sell (XXX) for $YY.YY [per #]" were `XXX` can be `/apples/i` or `/oranges/i` (case-insensitive) inside a named capture group and `YY.YY` is any price.  Maybe you're sufficiently familiar with regular expressions to write:
 
 ```ts
-const re = /We sell (?:[Aa][Pp][Pp][Ll][Ee][Ss]|[Oo][Rr][Aa][Nn][Gg][Ee][Ss]) for \$\d+\.\d{2} \[per #\]\./;
+const re = /We sell (?<products>(?:[Aa][Pp][Pp][Ll][Ee][Ss]|[Oo][Rr][Aa][Nn][Gg][Ee][Ss])) for \$\d+\.\d{2} \[per #\]\./;
 ```
 
 Not exactly readable.  Not lets try doing the same via composition:
@@ -28,13 +28,14 @@ Not exactly readable.  Not lets try doing the same via composition:
 const digit = /\d/;
 const price = `\\$${digit.source}+\\.${digit.source}{2}`;
 const products = /(?:[Aa][Pp][Pp][Ll][Ee][Ss]|[Oo][Rr][Aa][Nn][Gg][Ee][Ss])/;
-const re = new RegExp(`We sell ${products.source} for ${price} \\[per #\\]\\.`);
+const re = new RegExp(`We sell (?<products>${products.source}) for ${price} \\[per #\\]\\.`);
 ```
 
 Notice a few difficulties here:
 
 * Since `digit` and `products` are RegExp objects we need to use `.source` to get the source regexp.
 * Making `products` case insensitive is a pain.
+* Named capture groups decrease readability.
 * Exact text matches need to be escaped.
 * Regular expressions within the string need to be double escaped.
 
@@ -46,15 +47,16 @@ import { regex, oneOrMore, repeat } from 'lit-regex';
 const digit = /\d/;
 const price = regex`$${oneOrMore(digit)}.${repeat(digit, 2)}`;
 const products = [/apples/i, /oranges/i];
-const re = regex`We sell ${products} for ${price} [per #].`;
-// same as /We sell (?:[Aa][Pp][Pp][Ll][Ee][Ss]|[Oo][Rr][Aa][Nn][Gg][Ee][Ss]) for \$\d+\.\d{2} \[each\]\./
+const re = regex`We sell ${{ products }} for ${price} [per #].`;
+// same as /We sell (?<products>(?:[Aa][Pp][Pp][Ll][Ee][Ss]|[Oo][Rr][Aa][Nn][Gg][Ee][Ss])) for \$\d+\.\d{2} \[per #\]\./;
 ```
 
-A few simple rules to notice:
+A few rules to notice:
 
-* If an expression is a string, it is escaped for literal matching; this includes the static potions of the template string.
 * If an expression is a `RegExp`, the regular expression is embedded as a substring match (`i` flag is preserved or converted to inline case-insensitive).
-* If an expression is an Array, it is treated as an alternation (OR operand) and each item within the array are treated with these same rules.
+* If an expression is an `Array`, it is treated as an alternation (OR operand) and each item within the array are treated with these same rules.
+* If an expression is an object with one key, it is treated as a capture group where the key is the name and the value is treated with these same rules.
+* All other expressions (strings and numbers) are escaped for literal matching; this includes the static potions of the template string.
 
 While the ignoreCase flag (`i`) is propagated during composition; other flags are ignored.  To set flags on `regex` output use the following syntax:
 
@@ -63,26 +65,27 @@ regex.gi`Hello World`;
 // same as /Hello World/gi
 
 regex.m`${/^/}Hello World${/$/}`;
-// same as /Hello World/m
+// same as /^Hello World$/m
 ```
 
 ## Functional API
 
-Most of the power of `lit-regex` is in the `regex` template tag; which is effectively sugar for a set of composable functions for building regular expressions.  These functions can be used to alone to compose regular expressions or within `regex` template tag expressions.  These functions, in general, follow the same the rules listed above; again:
+Most of the power of `lit-regex` is in the `regex` template tag; which is effectively sugar for a set of composable functions for building regular expressions.  These functions can be used by themselves to compose regular expressions or within `regex` template tag expressions.  These functions, in general, follow the same the rules listed above; again:
 
-* String are treated as literals.
 * RegExps are treated as a regular expression.
 * Arrays are treated as an alternation.
+* Objects are capture groups.
+* Everything else is treated as a string literal.
 
-The example above could be rewritten using the composition functions:
+The example above example could be rewritten using the composition functions:
 
 ```js
-import { seq, oneOrMore, repeat, anyOf } from 'lit-regex';
+import { seq, oneOrMore, repeat, anyOf, capture } from 'lit-regex';
 
 const digit = /\d/;
 const price = seq('$', oneOrMore(digit), '.', repeat(digit, 2));
 const products = anyOf(/apples/i, /oranges/i);
-const re = seq('We sell ', products, ' for ', price, ' [per #].');
+const re = seq('We sell ', capture(products, 'products'), ' for ', price, ' [per #].');
 ```
 
 or a combination of functions and tagged templates:
@@ -93,7 +96,7 @@ import { regex, seq, oneOrMore, repeat, anyOf } from 'lit-regex';
 const digit = /\d/;
 const price = seq('$', oneOrMore(digit), '.', repeat(digit, 2));
 const products = anyOf(/apples/i, /oranges/i);
-const re = regex`We sell ${products} for ${price} [per #].`;
+const re = regex`We sell ${{products}} for ${price} [per #].`;
 ```
 
 Each function is explained below:
@@ -103,6 +106,9 @@ Each function is explained below:
 Each argument is treated by the expression rules listed above and combined into a RegExp sequence.
 
 ```js
+seq('a', 'b', /c/);
+// same as /abc/
+
 seq('Hello', ' ', /[Ww]orld/)
 // same as /Hello [Ww]orld/
 
@@ -115,6 +121,9 @@ seq('Hello', ' ', [/[Ww]orld/, 'Earth'])
 Each argument is treated by the expression rules listed above and combined into a RegExp alternation.
 
 ```js
+anyOf('a', 'b', /c/)
+// same as /[abc]/
+
 anyOf(/[Ww]orld/, 'Earth')
 // same as /(?:[Ww]orld|Earth)/
 ```
@@ -136,7 +145,7 @@ ahead([/Hello/, /[Ww]orld/]);
 
 ### `capture(arg, name?)`
 
-The argument argument is treated according to the expression rules listed above and returned in a capture group.  The second argument (if provided) is a named for generating named capture groups. 
+The argument argument is treated according to the expression rules listed above and returned in a capture group.  The second argument (if provided) is a name for generating named capture groups. 
 
 ```js
 capture('Hello');
@@ -214,8 +223,8 @@ repeat('Hello', 2);
 repeat(/[Ww]orld/, [2, 3]);
 // same as /(?:[Ww]orld){2,3}/
 
-repeat(['Hello', /[Ww]orld/], 5);
-// same as /(?:Hello|[Ww]orld){5}/
+repeat(['Hello', /[Ww]orld/], [5, Infinity]);
+// same as /(?:Hello|[Ww]orld){5,}/
 ```
 
 ## More examples
@@ -229,9 +238,9 @@ const localPart = oneOrMore(/[a-zA-Z0-9._%-]/);
 const domainPart = oneOrMore(/[a-zA-Z0-9.-]/);
 const tld = repeat(/[a-zA-Z]/, [2, 24]);
 
-const re = regex`${localPart}@${domainPart).${tld}`;
+const re = regex`${localPart}@${domainPart}.${tld}`;
 
-// same as /[a-zA-Z\d\.-_]+@[a-zA-Z\d\.-]+\.[a-zA-Z]{2,24}/
+// same as /[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,24}/
 ```
 
 ### URL
@@ -241,11 +250,11 @@ import { regex, oneOrMore, repeat } from 'lit-regex';
 
 const scheme = ['http', 'https', 'ftp'];
 const sub = 'www.';
-const sld = repeat(/[-a-zA-Z0-9@:%._\+~#=]/, [2, 256]);
-const domainPart = oneOrMore(/[a-zA-Z0-9.-]/);
+const domainPart = repeat(/[a-zA-Z0-9.-]/, [2, 256]);
 const tld = repeat(/[a-zA-Z]/, [2, 24]);
-
-const re = regex`${scheme}://${optional(sub)}${domainPart).${tld}`;
+a
+const re = regex`${scheme}://${optional(sub)}${domainPart}.${tld}`;
+// same as /(?:http|https|ftp):\/\/(?:www\.)?[a-zA-Z0-9.-]{2,256}\.[a-zA-Z]{2,24}/
 ```
 
 ### Dates with named capture
@@ -257,6 +266,7 @@ const year = repeat(/\d/, 4);
 const month = repeat(/\d/, 2);
 const day = repeat(/\d/, 2);
 const date = regex`${named(year, 'year')}-${named(month, 'month')}-${named(day, 'day')}`;
+// same as /(?<year>\d{4})\x2d(?<month>\d{2})\x2d(?<day>\d{2})/
 ```
 
 ## Credits and alternatives

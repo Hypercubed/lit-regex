@@ -12,24 +12,23 @@ type InputObject = { [key: string]: AcceptedInput };
 
 const CAPTURE_NAME = /^[A-Za-z][A-Za-z\d]*/;
 
-export function normalize(
-  input: AcceptedInput,
-  ignoreFlags = true
-): string {
+export function normalize(input: AcceptedInput, ignoreFlags = true): string {
   const overallIgnoreCaseFlag = isIgnoreCase(input);
 
   let source;
+  let keys;
 
   if (isRegexp(input)) {
     source = input.source;
   } else if (Array.isArray(input)) {
     source = s_anyOf(map(input, overallIgnoreCaseFlag));
-  } else if (typeof input === 'object') {
-    source = s_anyOf(
-      Object.keys(input).map((key) => {
-        return s_capture(normalize(input[key], overallIgnoreCaseFlag), CAPTURE_NAME.test(key) ? key : '');
-      })
-    );
+  } else if (
+    typeof input === 'object' &&
+    ((keys = Object.keys(input)), keys.length === 1)
+  ) {
+    const key = keys[0];
+    const name = CAPTURE_NAME.test(key) ? key : '';
+    source = s_capture(normalize(input[key], overallIgnoreCaseFlag), name);
   } else {
     source = escapeRegex(String(input));
   }
