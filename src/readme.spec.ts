@@ -1,8 +1,8 @@
 import {
+  ahead,
   anyOf,
   avoid,
   capture,
-  ahead,
   oneOrMore,
   optional,
   regex,
@@ -31,6 +31,11 @@ test('Usage with regex', () => {
   expect(re).toEqual(x);
 });
 
+test('flags usage', () => {
+  expect(regex.gi`Hello World`).toEqual(/Hello World/gi);
+  expect(regex.m`${/^/}Hello World${/$/}`).toEqual(/^Hello World$/m);
+});
+
 test('Functional API', () => {
   const digit = /\d/;
   const price = seq('$', oneOrMore(digit), '.', repeat(digit, 2));
@@ -48,11 +53,15 @@ test('Functional API with regex', () => {
 });
 
 test('seq', () => {
-  expect(seq('a', /b|c/)).toEqual(/a(?:b|c)/);
+  expect(seq('Hello', ' ', /[Ww]orld/)).toEqual(/Hello [Ww]orld/);
+
+  expect(seq('Hello', ' ', [/[Ww]orld/, 'Earth'])).toEqual(
+    /Hello (?:[Ww]orld|Earth)/
+  );
 });
 
 test('anyOf', () => {
-  expect(anyOf('Hello', /[Ww]orld/)).toEqual(/(?:Hello|[Ww]orld)/);
+  expect(anyOf(/[Ww]orld/, 'Earth')).toEqual(/(?:[Ww]orld|Earth)/);
 });
 
 test('ahead', () => {
@@ -68,7 +77,9 @@ test('capture', () => {
 
   expect(capture(/[Ww]orld/)).toEqual(/([Ww]orld)/);
 
-  expect(capture([/Hello/, /[Ww]orld/])).toEqual(/((?:Hello|[Ww]orld))/);
+  expect(capture([/Hello/, /[Ww]orld/], 'greeting')).toEqual(
+    /(?<greeting>(?:Hello|[Ww]orld))/
+  );
 });
 
 test('avoid', () => {

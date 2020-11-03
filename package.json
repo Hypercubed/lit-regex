@@ -1,6 +1,6 @@
 {
   "name": "lit-regex",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "A RegExp templating library for JavaScript",
   "main": "build/main/index.js",
   "typings": "build/main/index.d.ts",
@@ -22,7 +22,8 @@
     "watch": "jest --watch",
     "clean": "rimraf build coverage",
     "version": "chg release -y && git add -A CHANGELOG.md",
-    "np": "np --preview"
+    "np": "np --preview",
+    "prepack": "npm run build"
   },
   "engines": {
     "node": ">=10"
@@ -48,7 +49,8 @@
     "prettier": "^2.1.1",
     "ts-jest": "^26.4.3",
     "ts-node": "^9.0.0",
-    "typescript": "^4.0.2"
+    "typescript": "^4.0.2",
+    "xregexp": "^4.4.0"
   },
   "files": [
     "build/main",

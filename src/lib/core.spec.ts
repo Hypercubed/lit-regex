@@ -1,12 +1,12 @@
 import {
+  ahead,
   all,
   anyOf,
   avoid,
   capture,
   flags,
+  global,
   ignoreCase,
-  ahead,
-  named,
   oneOrMore,
   optional,
   repeat,
@@ -30,7 +30,7 @@ test('seq', () => {
   expect(seq('a', /b|c/)).toEqual(/a(?:b|c)/);
 
   expect(seq(/^/, 'b', /$/)).toEqual(/^b$/);
-  expect(anyOf(seq(seq(/a|b/)))).toEqual(/(?:a|b)/);
+  expect(anyOf(seq(seq(/a|b/)))).toEqual(/a|b/);
   expect(seq('thingy', anyOf(/[a]/, /b/))).toEqual(/thingy(?:[a]|b)/);
 
   expect(seq(/a/i)).toEqual(/a/i);
@@ -115,6 +115,18 @@ test('capture', () => {
   expect(capture(/hello/i)).toEqual(/(hello)/i);
 });
 
+test('named capture', () => {
+  expect(capture('World', 'planet')).toEqual(/(?<planet>World)/);
+  expect(capture(/Hello/, 'greeting')).toEqual(/(?<greeting>Hello)/);
+
+  expect(capture(['hello', 'world'], 'greeting')).toEqual(
+    /(?<greeting>(?:hello|world))/
+  );
+
+  expect(capture(/a/i, 'letter')).toEqual(/(?<letter>a)/i);
+  expect(capture(/hello/i, 'greet')).toEqual(/(?<greet>hello)/i);
+});
+
 test('optional', () => {
   expect(optional('a')).toEqual(/a?/);
 
@@ -177,6 +189,15 @@ test('flags', () => {
   expect(flags(['Hello', /[Ww]orld/], 'i')).toEqual(/(?:Hello|[Ww]orld)/i);
 });
 
+test('global', () => {
+  expect(global('WoRld')).toEqual(/WoRld/g);
+  expect(global('Hello world')).toEqual(/Hello world/g);
+
+  expect(global(seq(/a/i, 'b'))).toEqual(/[Aa]b/g);
+
+  expect(global(global('WoRld'))).toEqual(/WoRld/g);
+});
+
 test('repeat', () => {
   expect(repeat('a', 1)).toEqual(/a{1}/);
   expect(repeat(/a/, 2)).toEqual(/a{2}/);
@@ -186,17 +207,10 @@ test('repeat', () => {
   expect(repeat(/World/, [5, 7])).toEqual(/(?:World){5,7}/);
 
   expect(repeat(/a/i, 3)).toEqual(/a{3}/i);
-  expect(repeat(/hello/i, [1,5])).toEqual(/(?:hello){1,5}/i);
-});
+  expect(repeat(/hello/i, [1, 5])).toEqual(/(?:hello){1,5}/i);
 
-test('named', () => {
-  expect(named('World', 'planet')).toEqual(/(?<planet>World)/);
-  expect(named(/Hello/, 'greeting')).toEqual(/(?<greeting>Hello)/);
+  expect(repeat(/hello/, [5, Infinity])).toEqual(/(?:hello){5,}/);
 
-  expect(named(['hello', 'world'], 'greeting')).toEqual(
-    /(?<greeting>(?:hello|world))/
-  );
-
-  expect(named(/a/i, 'letter')).toEqual(/(?<letter>a)/i);
-  expect(named(/hello/i, 'greet')).toEqual(/(?<greet>hello)/i);
+  expect(repeat(/hello/, [0, Infinity])).toEqual(/(?:hello)*/);
+  expect(repeat(/hello/, [1, Infinity])).toEqual(/(?:hello)+/);
 });

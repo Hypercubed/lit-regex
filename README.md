@@ -16,7 +16,7 @@ npm i --save-dev lit-regex
 
 ## Usage
 
-Expanding on the example above.  Suppose we want to match the string "XXX for $YY.YY [per #]" were `XXX` can be `/apples/i` or `/oranges/` (case-insensitive) and `YY.YY` is any price.  Maybe you're sufficiently familiar with regular expressions to write:
+Expanding on the example above.  Suppose we want to match the string "XXX for $YY.YY [per #]" were `XXX` can be `/apples/i` or `/oranges/i` (case-insensitive) and `YY.YY` is any price.  Maybe you're sufficiently familiar with regular expressions to write:
 
 ```ts
 const re = /We sell (?:[Aa][Pp][Pp][Ll][Ee][Ss]|[Oo][Rr][Aa][Nn][Gg][Ee][Ss]) for \$\d+\.\d{2} \[per #\]\./;
@@ -53,16 +53,26 @@ const re = regex`We sell ${products} for ${price} [per #].`;
 A few simple rules to notice:
 
 * If an expression is a string, it is escaped for literal matching; this includes the static potions of the template string.
-* If an expression is a `RegExp`, the regular expression is embedded as a substring match (`i` flag is preserved).
+* If an expression is a `RegExp`, the regular expression is embedded as a substring match (`i` flag is preserved or converted to inline case-insensitive).
 * If an expression is an Array, it is treated as an alternation (OR operand) and each item within the array are treated with these same rules.
+
+While the ignoreCase flag (`i`) is propagated during composition; other flags are ignored.  To set flags on `regex` output use the following syntax:
+
+```js
+regex.gi`Hello World`;
+// same as /Hello World/gi
+
+regex.m`${/^/}Hello World${/$/}`;
+// same as /Hello World/m
+```
 
 ## Functional API
 
-Most of the power of `lit-regex` is in the `regex` template tag; which is effectively sugar for a set of composable functional tools for building regular expressions.  These functions can be used to alone to compose regular expressions or within `regex` template tags.  These functions, in general, follow the same the rules listed above again:
+Most of the power of `lit-regex` is in the `regex` template tag; which is effectively sugar for a set of composable functions for building regular expressions.  These functions can be used to alone to compose regular expressions or within `regex` template tag expressions.  These functions, in general, follow the same the rules listed above; again:
 
 * String are treated as literals.
 * RegExps are treated as a regular expression.
-* Arrays are treated as a to a alternation.
+* Arrays are treated as an alternation.
 
 The example above could be rewritten using the composition functions:
 
@@ -75,7 +85,7 @@ const products = anyOf(/apples/i, /oranges/i);
 const re = seq('We sell ', products, ' for ', price, ' [per #].');
 ```
 
-or a combination of functions and string literals:
+or a combination of functions and tagged templates:
 
 ```js
 import { regex, seq, oneOrMore, repeat, anyOf } from 'lit-regex';
@@ -93,8 +103,11 @@ Each function is explained below:
 Each argument is treated by the expression rules listed above and combined into a RegExp sequence.
 
 ```js
-seq('a', /b|c/);
-// same as /a(?:b|c)/
+seq('Hello', ' ', /[Ww]orld/)
+// same as /Hello [Ww]orld/
+
+seq('Hello', ' ', [/[Ww]orld/, 'Earth'])
+// same as /Hello (?:[Ww]orld|Earth)/
 ```
 
 ### `anyOf(...arg)`
@@ -102,8 +115,8 @@ seq('a', /b|c/);
 Each argument is treated by the expression rules listed above and combined into a RegExp alternation.
 
 ```js
-anyOf('Hello', /[Ww]orld/);
-// same as /(?:Hello|[Ww]orld)/
+anyOf(/[Ww]orld/, 'Earth')
+// same as /(?:[Ww]orld|Earth)/
 ```
 
 ### `ahead(arg)`
@@ -121,9 +134,9 @@ ahead([/Hello/, /[Ww]orld/]);
 // same as /(?=(?:Hello|[Ww]orld))/
 ```
 
-### `capture(arg)`
+### `capture(arg, name?)`
 
-The single argument is treated according to the expression rules listed above and returned in a capture group.
+The argument argument is treated according to the expression rules listed above and returned in a capture group.  The second argument (if provided) is a named for generating named capture groups. 
 
 ```js
 capture('Hello');
@@ -132,8 +145,8 @@ capture('Hello');
 capture(/[Ww]orld/);
 // same as /([Ww]orld)/
 
-ahead(['Hello', /[Ww]orld/]);
-// same as /((?:Hello|[Ww]orld))/
+capture(['Hello', /[Ww]orld/], 'greeting');
+// same as /(?<greeting>(?:Hello|[Ww]orld))/
 ```
 
 ### `avoid(arg)`
@@ -248,7 +261,7 @@ const date = regex`${named(year, 'year')}-${named(month, 'month')}-${named(day, 
 
 ## Credits and alternatives
 
-The composable RegExp API inspired by [/compose-regexp.js](https://github.com/pygy/compose-regexp.js).  Regular expressions via template tag inspired by [lit-html](https://lit-html.polymer-project.org/) and [re-template-tag](https://2ality.com/2017/07/re-template-tag.html).
+The composable RegExp functional API inspired by [/compose-regexp.js](https://github.com/pygy/compose-regexp.js).  Regular expressions via template tag inspired by [lit-html](https://lit-html.polymer-project.org/) and [Easy Dynamic Regular Expressions with Tagged Template Literals and Proxies](https://lea.verou.me/2018/06/easy-dynamic-regular-expressions-with-tagged-template-literals-and-proxies/).
 
 ## License
 

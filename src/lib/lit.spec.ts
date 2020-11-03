@@ -1,4 +1,6 @@
-import { anyOf, avoid, capture, ignoreCase, ahead } from './core';
+import XRegExp from 'xregexp';
+
+import { ahead, anyOf, avoid, capture, ignoreCase } from './core';
 import { regex } from './lit';
 
 test('strings and regex', () => {
@@ -20,6 +22,40 @@ test('arrays', () => {
 
   expect(regex`Hello ${/(?:World|Earth)/}`).toEqual(/Hello (?:World|Earth)/);
   expect(regex`Hello ${['World', 'Earth']}`).toEqual(/Hello (?:World|Earth)/);
+  expect(regex`Hello ${[/World/, 'Earth']}`).toEqual(/Hello (?:World|Earth)/);
+  expect(regex`Hello ${[/World/i, 'Earth']}`).toEqual(
+    /Hello (?:[Ww][Oo][Rr][Ll][Dd]|Earth)/
+  );
+
+  expect(regex`Hello ${[/World/i, /Earth/i]}`).toEqual(
+    /Hello (?:[Ww][Oo][Rr][Ll][Dd]|[Ee][Aa][Rr][Tt][Hh])/
+  );
+  expect(regex`${[/World/i, /Earth/i]}`).toEqual(/(?:World|Earth)/i);
+});
+
+test('objects', () => {
+  expect(regex`Hello ${{ planet: 'World' }}`).toEqual(/Hello (?<planet>World)/);
+  expect(regex`Hello ${{ planet: ['World', 'Earth'] }}`).toEqual(
+    /Hello (?<planet>(?:World|Earth))/
+  );
+  expect(regex`Hello ${{ world: 'World', earth: 'Earth' }}`).toEqual(
+    /Hello (?:(?<world>World)|(?<earth>Earth))/
+  );
+
+  expect(regex`Hello ${{ planet: [/World/, /Earth/] }}`).toEqual(
+    /Hello (?<planet>(?:World|Earth))/
+  );
+  expect(regex`Hello ${{ planet: [/World/i, /Earth/i] }}`).toEqual(
+    /Hello (?<planet>(?:[Ww][Oo][Rr][Ll][Dd]|[Ee][Aa][Rr][Tt][Hh]))/
+  );
+
+  const planet = /World/;
+  expect(regex`Hello ${{ planet }}`).toEqual(/Hello (?<planet>World)/);
+
+  const planet2 = /World/i;
+  expect(regex`Hello ${{ planet2 }}`).toEqual(
+    /Hello (?<planet2>[Ww][Oo][Rr][Ll][Dd])/
+  );
 });
 
 test('other regex', () => {
@@ -72,4 +108,39 @@ test('returns a clone', () => {
   const re = /World/;
   expect(regex`${re}`).toEqual(re);
   expect(regex`${re}`).not.toBe(re);
+});
+
+test('flags', () => {
+  expect(regex.i`World`).toEqual(/World/i);
+  expect(regex.imu`World`).toEqual(/World/imu);
+});
+
+test('invalid flags', () => {
+  const re = /World/;
+  expect(() => {
+    regex.x`${re}`;
+  }).toThrow(`SyntaxError: Invalid flags supplied to regex 'x'`);
+
+  expect(() => {
+    regex.igz`${re}`;
+  }).toThrow(`SyntaxError: Invalid flags supplied to regex 'igz'`);
+});
+
+test('function props still exist', () => {
+  expect(regex.name).toEqual('regex');
+});
+
+test('works with xregexp', () => {
+  const x = (source: string) => {
+    return XRegExp(source, 'x');
+  };
+
+  expect(regex`Hello ${x(`world`)}`).toEqual(/Hello world/);
+
+  expect(
+    regex`${x(`
+    Hello # a greeting
+    world # a place
+  `)}`
+  ).toEqual(/Hello(?:)world(?:)/);
 });

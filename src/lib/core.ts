@@ -1,127 +1,59 @@
-import escape from 'escape-string-regexp';
-import isRegexp from 'is-regexp';
-
-import { hasTopLevelChoice, isAtomic } from './utils';
-
-export type AcceptedInput = string | RegExp | Array<AcceptedInput>;
-
-function normalize(input: AcceptedInput): string {
-  if (isRegexp(input)) return input.source;
-  if (Array.isArray(input)) return anyOf(...input).source;
-  return escape(String(input));
-}
-
-function isIgnoreCase(input: AcceptedInput): boolean {
-  if (isRegexp(input)) return input.ignoreCase;
-  if (Array.isArray(input)) return input.every(isIgnoreCase);
-  return false;
-}
-
-function _ignoreCase(source: string) {
-  return source.replace(/\\\\[\s\S]|[A-Za-z]/g, (s) => {
-    if (s.length === 1) {
-      const cu = s.charCodeAt(0) & ~32;
-      if (65 <= cu && cu <= 90) {
-        return '[' + String.fromCharCode(cu, cu | 32) + ']';
-      }
-    }
-    return s;
-  });
-}
+import {
+  _anyChar,
+  _anyOf,
+  _avoid,
+  _capture,
+  _chars,
+  _map,
+  _seq,
+  AcceptedInput,
+  getFlags,
+  isIgnoreCase,
+  joinFlags,
+  normalize,
+} from './core-utils';
+import { makeAtomic, suffix } from './source-utils';
 
 // *** Sequences **
 export const empty = new RegExp('');
 
-function _seq(args: string[]): string {
-  const needsGroups = args.length > 1;
-  return args
-    .map((arg) => {
-      return needsGroups && hasTopLevelChoice(arg) ? `(?:${arg})` : arg;
-    })
-    .join('');
-}
-
 export function seq(...args: AcceptedInput[]): RegExp {
   if (!args.length) return empty;
-  const allIgnoreCase = isIgnoreCase(args);
-  return new RegExp(_seq(args.map(arg => {
-    const normalized = normalize(arg);
-    return (!allIgnoreCase && isIgnoreCase(arg)) ? _ignoreCase(normalized) : normalized;
-  })), allIgnoreCase ? 'i' : '');
+  const hoistCasing = isIgnoreCase(args);
+  return new RegExp(_seq(_map(args, hoistCasing)), hoistCasing ? 'i' : '');
 }
 
-
-function _anyChar(args: string[]) {
-  return args.length === 1 ? normalize(args[0]) : `[${_seq(args.map(normalize))}]`;
-}
-
-export function anyChar(arg: string) {
-  return new RegExp(_anyChar(arg.split('')));
-}
-
-export function _anyOf(args: string[]): string {
-  const allChars = args.every((s) => /^\w$/.test(s));
-  return allChars ? _anyChar(args) : `(?:${args.join('|')})`;
-}
-
-export function anyOf(...args: AcceptedInput[]) {
+export function anyOf(...args: AcceptedInput[]): RegExp {
   if (!args.length) return empty;
-  const allIgnoreCase = isIgnoreCase(args);
-  return new RegExp(_anyOf(args.map(arg => {
-    const normalized = normalize(arg);
-    return (!allIgnoreCase && isRegexp(arg) && arg.ignoreCase) ? _ignoreCase(normalized) : normalized;
-  })), allIgnoreCase ? 'i' : '');
+  const hoistCasing = isIgnoreCase(args);
+  return new RegExp(_anyOf(_map(args, hoistCasing)), hoistCasing ? 'i' : '');
 }
 
 // *** Groups **
 
-/**
- * If an input is not atomic, returns the input in a group
- */
-export function _group(source: string): string {
-  return isAtomic(source) ? source : `(?:${source})`
+export function ahead(input: AcceptedInput): RegExp {
+  return new RegExp(`(?=${normalize(input)})`, isIgnoreCase(input) ? 'i' : '');
 }
 
-export function ahead(input: AcceptedInput) {
-  return new RegExp(
-    `(?=${normalize(input)})`,
-    isIgnoreCase(input) ? 'i' : ''
-  );
-}
-
-function _notChar(source: string): string {
-  return `[^${source}]`;
+export function anyChar(arg: string): RegExp {
+  return new RegExp(_anyChar(arg.split('')));
 }
 
 export function notChar(source: string): RegExp {
-  return new RegExp(_notChar(normalize(source)));
-}
-
-function _avoid(source: string): string {
-  return /^\w$/.test(source) ? _notChar(source) : `(?!${source})`;
+  return new RegExp(_chars(normalize(source), true));
 }
 
 export function avoid(input: AcceptedInput): RegExp {
-  return new RegExp(
-    _avoid(normalize(input)),
-    isIgnoreCase(input) ? 'i' : ''
-  );
+  return new RegExp(_avoid(normalize(input)), isIgnoreCase(input) ? 'i' : '');
 }
 
-export function capture(input: AcceptedInput): RegExp {
-  return new RegExp(
-    `(${normalize(input)})`,
-    isIgnoreCase(input) ? 'i' : ''
-  );
-}
-
-export function named(input: AcceptedInput, name: string): RegExp {
-  return new RegExp(`(?<${name}>${normalize(input)})`, isIgnoreCase(input) ? 'i' : '');
+export function capture(input: AcceptedInput, name?: string): RegExp {
+  return new RegExp(_capture(input, name), isIgnoreCase(input) ? 'i' : '');
 }
 
 export function optional(input: AcceptedInput): RegExp {
   return new RegExp(
-    `${_group(normalize(input))}?`,
+    `${makeAtomic(normalize(input))}?`,
     isIgnoreCase(input) ? 'i' : ''
   );
 }
@@ -130,22 +62,35 @@ export function optional(input: AcceptedInput): RegExp {
 
 export function oneOrMore(input: AcceptedInput) {
   return new RegExp(
-    `${_group(normalize(input))}+`,
+    suffix(normalize(input), '+'),
     isIgnoreCase(input) ? 'i' : ''
   );
 }
 
 export function zeroOrMore(input: AcceptedInput) {
   return new RegExp(
-    `${_group(normalize(input))}*`,
+    suffix(normalize(input), '*'),
     isIgnoreCase(input) ? 'i' : ''
   );
 }
 
-// TODO: simplify some repeats??
-export function repeat(input: AcceptedInput, N: number | [number, number]) {
+export function repeat(
+  input: AcceptedInput,
+  N: number | [number, number | '']
+) {
+  let _suffix = `{${N}}`;
+
+  if (Array.isArray(N)) {
+    // Simpliy some repeats
+    if (N[1] === Infinity || N[1] === '') {
+      if (N[0] === 0) _suffix = `*`;
+      else if (N[0] === 1) _suffix = `+`;
+      else _suffix = `{${N[0]},}`;
+    }
+  }
+
   return new RegExp(
-    `${_group(normalize(input))}{${N}}`,
+    suffix(normalize(input), _suffix),
     isIgnoreCase(input) ? 'i' : ''
   );
 }
@@ -153,13 +98,21 @@ export function repeat(input: AcceptedInput, N: number | [number, number]) {
 // *** Wrappers ***
 
 export function all(input: AcceptedInput) {
-  return new RegExp(`^${normalize(input)}$`, isIgnoreCase(input) ? 'i' : '');
+  return new RegExp(`^${normalize(input)}$`, getFlags(input));
+}
+
+// TODO: sequence guard /"[^"]+"/
+
+// *** Flags ***
+
+export function flags(input: AcceptedInput, flags: string) {
+  return new RegExp(normalize(input), joinFlags(input, flags));
 }
 
 export function ignoreCase(input: AcceptedInput) {
-  return new RegExp(normalize(input), 'i');
+  return flags(input, 'i');
 }
 
-export function flags(input: AcceptedInput, opts: string) {
-  return new RegExp(normalize(input), opts);
+export function global(input: AcceptedInput) {
+  return flags(input, 'g');
 }
