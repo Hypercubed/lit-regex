@@ -16,8 +16,8 @@ import {
 
 test('seq', () => {
   expect(seq()).toEqual(/(?:)/);
-  expect(seq('')).toEqual(/(?:)/); // ??
-  expect(seq('', '', '')).toEqual(/(?:)/); // ??
+  expect(seq('')).toEqual(/(?:)/);
+  expect(seq('', '', '')).toEqual(/(?:)/);
 
   expect(seq('a')).toEqual(/a/);
   expect(seq('a', 'b')).toEqual(/ab/);
@@ -36,6 +36,11 @@ test('seq', () => {
   expect(seq(/a/i)).toEqual(/a/i);
   expect(seq(/a/i, 'b')).toEqual(/[Aa]b/);
   expect(seq(/a/i, /b/i)).toEqual(/ab/i);
+
+  expect(seq(/a/i, { name: /b/i })).toEqual(/a(?<name>b)/i);
+  expect(seq(/a/i, { n: /b/i })).toEqual(/a(?<n>b)/i);
+
+  expect(seq('$', /hElLo/i)).toEqual(/\$[Hh][Ee][Ll][Ll][Oo]/);
 });
 
 test('ignoreCase', () => {
@@ -48,15 +53,15 @@ test('ignoreCase', () => {
   expect(seq(ignoreCase(/a/), 'b')).toEqual(/[Aa]b/);
   expect(seq(ignoreCase(/a/i), 'b')).toEqual(/[Aa]b/);
 
-  expect(seq(/a/i, 'b')).toEqual(/[Aa]b/);
-
   expect(ignoreCase(seq(/a/i, 'b'))).toEqual(/[Aa]b/i);
 
   expect(ignoreCase(ignoreCase('WoRld'))).toEqual(/WoRld/i);
+
+  expect(ignoreCase({ name: 'WoRld' })).toEqual(/(?<name>WoRld)/i);
 });
 
 test('anyOf', () => {
-  expect(anyOf()).toEqual(/(?:)/); // ??
+  expect(anyOf()).toEqual(/(?:)/);
 
   expect(anyOf('Hello', 'World')).toEqual(/(?:Hello|World)/);
   expect(anyOf('Hello', 'World', 'Earth')).toEqual(/(?:Hello|World|Earth)/);
@@ -70,6 +75,8 @@ test('anyOf', () => {
   expect(anyOf(/a/i)).toEqual(/a/i);
   expect(anyOf(/a/i, 'b')).toEqual(/(?:[Aa]|b)/);
   expect(anyOf(/a/i, /b/i)).toEqual(/[ab]/i);
+
+  expect(anyOf(/a/i, { name: 'WoRld' })).toEqual(/(?:[Aa]|(?<name>WoRld))/);
 });
 
 test('avoid', () => {
@@ -125,6 +132,10 @@ test('named capture', () => {
 
   expect(capture(/a/i, 'letter')).toEqual(/(?<letter>a)/i);
   expect(capture(/hello/i, 'greet')).toEqual(/(?<greet>hello)/i);
+
+  expect(capture(/a/i, 'b')).toEqual(/(?<b>a)/i);
+
+  expect(capture({ b: /a/i })).toEqual(/((?<b>a))/i); // ??
 });
 
 test('optional', () => {
@@ -213,4 +224,10 @@ test('repeat', () => {
 
   expect(repeat(/hello/, [0, Infinity])).toEqual(/(?:hello)*/);
   expect(repeat(/hello/, [1, Infinity])).toEqual(/(?:hello)+/);
+});
+
+test('multiline', () => {
+  expect(anyOf(/^abc$/m, /^xyz$/)).toEqual(/(?:^abc$|^xyz$)/); // TODO: /(?<=^|[\n\r])abc(?=$|[\n\r])|^xyz$/
+
+  expect(seq(/^abc$/m, /xyz/)).toEqual(/^abc$xyz/); // TODO: /(?<=^|[\n\r])abc(?=$|[\n\r])xyz/  ???
 });

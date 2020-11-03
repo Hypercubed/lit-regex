@@ -1,18 +1,21 @@
 import {
-  _anyChar,
-  _anyOf,
-  _avoid,
-  _capture,
-  _chars,
   _map,
-  _seq,
   AcceptedInput,
   getFlags,
   isIgnoreCase,
   joinFlags,
   normalize,
 } from './core-utils';
-import { makeAtomic, suffix } from './source-utils';
+import {
+  anyChar as _anyChar,
+  anyOf as _anyOf,
+  avoid as _avoid,
+  capture as _capture,
+  seq as _seq,
+  chars,
+  guaranteeAtomic,
+  suffix,
+} from './source-utils';
 
 // *** Sequences **
 export const empty = new RegExp('');
@@ -36,11 +39,11 @@ export function ahead(input: AcceptedInput): RegExp {
 }
 
 export function anyChar(arg: string): RegExp {
-  return new RegExp(_anyChar(arg.split('')));
+  return new RegExp(_anyChar(_map(arg.split(''))));
 }
 
 export function notChar(source: string): RegExp {
-  return new RegExp(_chars(normalize(source), true));
+  return new RegExp(chars(normalize(source), true));
 }
 
 export function avoid(input: AcceptedInput): RegExp {
@@ -48,12 +51,15 @@ export function avoid(input: AcceptedInput): RegExp {
 }
 
 export function capture(input: AcceptedInput, name?: string): RegExp {
-  return new RegExp(_capture(input, name), isIgnoreCase(input) ? 'i' : '');
+  return new RegExp(
+    _capture(normalize(input), name),
+    isIgnoreCase(input) ? 'i' : ''
+  );
 }
 
 export function optional(input: AcceptedInput): RegExp {
   return new RegExp(
-    `${makeAtomic(normalize(input))}?`,
+    `${guaranteeAtomic(normalize(input))}?`,
     isIgnoreCase(input) ? 'i' : ''
   );
 }
