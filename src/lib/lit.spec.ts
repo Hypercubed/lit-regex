@@ -57,7 +57,7 @@ test('objects', () => {
     /Hello (?<planet2>[Ww][Oo][Rr][Ll][Dd])/
   );
 
-  expect(regex`Hello ${{ '': planet }}; goodbye ${{ '': planet }}`).toEqual(
+  expect(regex`Hello ${{ $: planet }}; goodbye ${{ $: planet }}`).toEqual(
     /Hello (World); goodbye (World)/
   );
 
