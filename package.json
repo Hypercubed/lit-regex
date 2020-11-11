@@ -22,7 +22,7 @@
     "watch": "jest --watch",
     "clean": "rimraf build coverage",
     "version": "chg release -y && git add -A CHANGELOG.md",
-    "np": "np --preview",
+    "np": "np",
     "prepack": "npm run build"
   },
   "engines": {
