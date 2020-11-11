@@ -1,6 +1,6 @@
 {
   "name": "lit-regex",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "A RegExp templating library for JavaScript",
   "main": "build/main/index.js",
   "typings": "build/main/index.d.ts",
