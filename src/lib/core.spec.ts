@@ -37,6 +37,9 @@ test('seq', () => {
   expect(seq(/a/i, 'b')).toEqual(/[Aa]b/);
   expect(seq(/a/i, /b/i)).toEqual(/ab/i);
 
+  expect(seq(/a/i, { $name: /b/i })).toEqual(/a(b)/i);
+  expect(seq(/a/i, { $n: /b/i })).toEqual(/a(b)/i);
+
   expect(seq(/a/i, { name: /b/i })).toEqual(/a(?<name>b)/i);
   expect(seq(/a/i, { n: /b/i })).toEqual(/a(?<n>b)/i);
 
@@ -76,6 +79,7 @@ test('anyOf', () => {
   expect(anyOf(/a/i, 'b')).toEqual(/(?:[Aa]|b)/);
   expect(anyOf(/a/i, /b/i)).toEqual(/[ab]/i);
 
+  expect(anyOf(/a/i, { $name: 'WoRld' })).toEqual(/(?:[Aa]|(WoRld))/);
   expect(anyOf(/a/i, { name: 'WoRld' })).toEqual(/(?:[Aa]|(?<name>WoRld))/);
 });
 

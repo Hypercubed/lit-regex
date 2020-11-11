@@ -3,19 +3,22 @@ import isRegexp from 'is-regexp';
 
 import { s_anyOf, s_capture, s_ignoreCase } from './source-utils';
 
-export type AcceptedInput = string | RegExp | InputArray | InputObject;
+export type AcceptedInput = string | number | RegExp | InputArray | InputObject;
 
 type InputArray = Array<AcceptedInput>;
-type InputObject = { [key: string]: AcceptedInput };
+type InputObject = { [K: string]: AcceptedInput };
 
 // TODO: convert multiline /^hello$/m -> /(?<=^|[\n\r])hello(?=$|[\n\r])/ ?
 
 const CAPTURE_NAME = /^[A-Za-z][A-Za-z\d]*/;
 
-function isCaptureObject(input: unknown): input is object {
+function isCaptureObject(input: unknown): input is InputObject {
   if (typeof input === 'object' && input !== null) {
     const keys = Object.keys(input);
-    return keys.length === 1 && (keys[0] == '$' || CAPTURE_NAME.test(keys[0]));
+    if (keys.length === 1) {
+      const key = keys[0];
+      return key === '' || key.startsWith('$') || CAPTURE_NAME.test(keys[0]);
+    }
   }
   return false;
 }
@@ -31,7 +34,7 @@ export function normalize(input: AcceptedInput, ignoreFlags = true): string {
     source = s_anyOf(map(input, overallIgnoreCaseFlag));
   } else if (isCaptureObject(input)) {
     const key = Object.keys(input)[0];
-    const name = CAPTURE_NAME.test(key) ? key : '';
+    const name = key.startsWith('$') ? '' : key;
     source = s_capture(normalize(input[key], overallIgnoreCaseFlag), name);
   } else {
     source = escapeRegex(String(input));

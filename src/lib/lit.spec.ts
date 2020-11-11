@@ -34,35 +34,33 @@ test('arrays', () => {
 });
 
 test('objects', () => {
-  expect(regex`Hello ${{ planet: 'World' }}`).toEqual(/Hello (?<planet>World)/);
+  expect(regex`Hello ${{ $planet: 'World' }}`).toEqual(/Hello (World)/);
   expect(regex`Hello ${{ planet: ['World', 'Earth'] }}`).toEqual(
     /Hello (?<planet>(?:World|Earth))/
   );
-  expect(regex`Hello ${[{ world: 'World' }, { earth: 'Earth' }]}`).toEqual(
-    /Hello (?:(?<world>World)|(?<earth>Earth))/
+  expect(regex`Hello ${[{ $world: 'World' }, { earth: 'Earth' }]}`).toEqual(
+    /Hello (?:(World)|(?<earth>Earth))/
   );
 
   expect(regex`Hello ${{ planet: [/World/, /Earth/] }}`).toEqual(
     /Hello (?<planet>(?:World|Earth))/
   );
-  expect(regex`Hello ${{ planet: [/World/i, /Earth/i] }}`).toEqual(
-    /Hello (?<planet>(?:[Ww][Oo][Rr][Ll][Dd]|[Ee][Aa][Rr][Tt][Hh]))/
+  expect(regex`Hello ${{ $planet: [/World/i, /Earth/i] }}`).toEqual(
+    /Hello ((?:[Ww][Oo][Rr][Ll][Dd]|[Ee][Aa][Rr][Tt][Hh]))/
   );
 
   const planet = /World/;
   expect(regex`Hello ${{ planet }}`).toEqual(/Hello (?<planet>World)/);
 
-  const planet2 = /World/i;
-  expect(regex`Hello ${{ planet2 }}`).toEqual(
-    /Hello (?<planet2>[Ww][Oo][Rr][Ll][Dd])/
+  const $planet = /World/i;
+  expect(regex`Hello ${{ $planet }}`).toEqual(/Hello ([Ww][Oo][Rr][Ll][Dd])/);
+
+  expect(regex`Hello ${{ '': planet }}; goodbye ${{ '': $planet }}`).toEqual(
+    /Hello (World); goodbye ([Ww][Oo][Rr][Ll][Dd])/
   );
 
-  expect(regex`Hello ${{ $: planet }}; goodbye ${{ $: planet }}`).toEqual(
-    /Hello (World); goodbye (World)/
-  );
-
-  expect(regex`Hello ${{ $: planet }}; goodbye ${{ $: planet }}`).toEqual(
-    /Hello (World); goodbye (World)/
+  expect(regex`Hello ${{ $: planet }}; goodbye ${{ $: $planet }}`).toEqual(
+    /Hello (World); goodbye ([Ww][Oo][Rr][Ll][Dd])/
   );
 
   expect(regex`Hello ${{ a: 'b' }}`).toEqual(/Hello (?<a>b)/);

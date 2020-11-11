@@ -1,22 +1,22 @@
 # lit-regex
 
-A template literals RegExp library for JavaScript
+Template literals regular expressions for JavaScript
 
 ## Overview
 
-There are a few existing JavaScript tools for composing regular expressions (see, for example, [re-template-tag](https://github.com/rauschma/re-template-tag) and [regexp-make-js](https://github.com/mikesamuel/regexp-make-js)).  However, all of these assume the users is writing primarily regex. There are many cases were most of the text will be plaintext requiring escaping.  For example, if I wanted to match the string "Apples for $0.99 (per lb)" I would need the regexp `/Apples for \$0\.99 \[per #\]/`.  Did I forget to escape anything?  Start trying to compose a regexp using strings and the problem is exasperated.
+There are a few existing JavaScript tools for composing regular expressions (see, for example, [re-template-tag](https://github.com/rauschma/re-template-tag) and [regexp-make-js](https://github.com/mikesamuel/regexp-make-js)).  However, all of these assume the users is writing primarily regex, treating literal strings as an afterthought.  There are many cases were most of the text will be plaintext which may require escaping.  For example, if I wanted to match the string "Apples for $0.99 (per lb)" I would need the regular expression `/Apples for \$0\.99 \[per #\]/`.  Did I forget to escape anything?  Start trying to compose a regex using strings and the problem is exasperated.
 
-`lit-regex` lets you write readable regular expressions in JavaScript using [template literals](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals). `lit-regex` templates are plain text strings that allow embedded regular expressions for composability.
+`lit-regex` lets you compose coherent regular expressions in JavaScript using [template literals](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals). `lit-regex` templates are plain text strings that allow embedded regular expressions for composability.
 
 ## Installation
 
 ```sh
-npm i --save-dev lit-regex
+npm i lit-regex
 ```
 
 ## Usage
 
-Expanding on the example above; suppose we want to match the string "We sell (XXX) for $YY.YY [per #]" were `XXX` can be `/apples/i` or `/oranges/i` (case-insensitive) inside a named capture group and `YY.YY` is any price.  Maybe you're sufficiently familiar with regular expressions to write:
+Expanding on the example above; suppose we want to match the string "We sell (XXX) for $YY.YY [per #]" were `XXX` can be `/apples/i` or `/oranges/i` (case-insensitive) inside a named capture group and `YY.YY` is any price inside.  Maybe you're sufficiently familiar with regular expressions to write:
 
 ```ts
 const re = /We sell (?<products>(?:[Aa][Pp][Pp][Ll][Ee][Ss]|[Oo][Rr][Aa][Nn][Gg][Ee][Ss])) for \$\d+\.\d{2} \[per #\]\./;
@@ -35,9 +35,9 @@ Notice a few difficulties here:
 
 * Since `digit` and `products` are RegExp objects we need to use `.source` to get the source regexp.
 * Making `products` case insensitive is a pain.
-* Named capture groups decrease readability.
+* Named capture groups decrease readability and appear redundant.
 * Exact text matches need to be escaped.
-* Regular expressions within the string need to be double escaped.
+* Regular expressions within a string need to be double escaped.
 
 Using `lit-regex` we could write:
 
@@ -55,10 +55,10 @@ A few rules to notice:
 
 * If an expression is a `RegExp`, the regular expression is embedded as a substring match (`i` flag is preserved or converted to inline case-insensitive).
 * If an expression is an `Array`, it is treated as an alternation (OR operand) and each item within the array is treated with these same rules.
-* If an expression is an object with one key, it is treated as a capture group where the key is the name and the value is treated with these same rules.
-* All other expressions (strings and numbers) are escaped for literal matching; this includes the static potions of the template string.
+* If an expression is an object with one key, it is treated as a capture group where the key is the name (keys prefixed with a `$` are unnamed) and the value is treated with these same rules.
+* All other expressions (strings and numbers) are escaped for literal matching; this includes the static portions of the template string.
 
-While the ignoreCase flag (`i`) is propagated during composition; other flags are ignored.  To set flags on `regex` output use the following syntax:
+While the ignore case flag (`i`) is propagated during composition; other flags are ignored.  To set flags on `regex` output use the following syntax:
 
 ```js
 regex.gi`Hello World`;
@@ -72,12 +72,12 @@ regex.m`${/^/}Hello World${/$/}`;
 
 Most of the power of `lit-regex` is in the `regex` template tag; which is, effectively, sugar for a set of composable functions for building regular expressions.  These functions can be used by themselves to compose regular expressions or within `regex` template tag expressions.  These functions, in general, follow the same the rules listed above; again:
 
-* RegExps are treated as a regular expression.
+* `RegExp`s are treated as a regular expression.
 * Arrays are treated as an alternation.
 * Objects are capture groups.
 * Everything else is escaped for a literal match.
 
-The example above example could be rewritten using the composition functions:
+The example above can be rewritten using the composition functions:
 
 ```js
 import { seq, oneOrMore, repeat, anyOf, capture } from 'lit-regex';
@@ -145,7 +145,7 @@ ahead([/Hello/, /[Ww]orld/]);
 
 ### `capture(arg, name?)`
 
-The argument argument is treated according to the expression rules listed above and returned in a capture group.  The second argument (if provided) is a name for generating named capture groups. 
+The first argument is treated according to the expression rules listed above and returned in a capture group.  The second argument (if provided) is a name for generating named capture groups. 
 
 ```js
 capture('Hello');
@@ -239,7 +239,6 @@ const domainPart = oneOrMore(/[a-zA-Z0-9.-]/);
 const tld = repeat(/[a-zA-Z]/, [2, 24]);
 
 const re = regex`${localPart}@${domainPart}.${tld}`;
-
 // same as /[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,24}/
 ```
 
@@ -271,7 +270,7 @@ const date = regex`${{ year }}-${{ month }}-${{ day }}`;
 
 ## Credits and alternatives
 
-The composable RegExp functional API inspired by [compose-regexp.js](https://github.com/pygy/compose-regexp.js).  Regular expressions via template tag inspired by [lit-html](https://lit-html.polymer-project.org/) and [Easy Dynamic Regular Expressions with Tagged Template Literals and Proxies](https://lea.verou.me/2018/06/easy-dynamic-regular-expressions-with-tagged-template-literals-and-proxies/).
+The composable RegExp functional API inspired by [compose-regexp.js](https://github.com/pygy/compose-regexp.js).  Composable regular expressions via template tags inspired by [lit-html](https://lit-html.polymer-project.org/) and [Easy Dynamic Regular Expressions with Tagged Template Literals and Proxies](https://lea.verou.me/2018/06/easy-dynamic-regular-expressions-with-tagged-template-literals-and-proxies/).
 
 ## License
 
