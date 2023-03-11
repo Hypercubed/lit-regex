@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "clone-regexp": "^2.2.0",
-    "escape-string-regexp": "^4.0.0",
+    "escape-string-regexp": "^5.0.0",
     "is-regexp": "^2.1.0",
     "rimraf": "^3.0.2"
   },
